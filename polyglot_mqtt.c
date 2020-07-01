@@ -13,9 +13,10 @@
 #include <mosquitto.h>
 #include "cJSON.h"
 #include "c_interface.h"
+#include "c_int_interface.h"
 
 struct mosquitto *mosq = NULL;
-int polyglot_connected = 0;
+struct profile *poly = NULL;
 
 static void on_connect(struct mosquitto *m, void *ptr, int res);
 static void on_message(struct mosquitto *m, void *ptr,
@@ -27,15 +28,6 @@ static int get_stdin_info(char **host, int *port, int *profile);
 static int get_stdin_info_test(char **host, int *port, int *profile);
 extern void initialize_logging(void);
 
-struct profile {
-	int num;
-	char *config;
-	int junk;
-	void *(*start)(void *args);
-	void *(*longPoll)(void *args);
-	void *(*shortPoll)(void *args);
-	void *(*onConfig)(void *args);
-};
 
 /*
  * Initialize the link to Polyglot
@@ -44,7 +36,6 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 {
 	char msg[50];
 	int ret;
-	struct profile *p;
 	char *host;
 	int port;
 	int profile;
@@ -55,24 +46,25 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 
 	initialize_logging();
 
-	p = malloc(sizeof(struct profile));
-	if (p == NULL) {
+	poly = malloc(sizeof(struct profile));
+	if (poly == NULL) {
 		fprintf(stderr, "init: memory alloction failed for struct profile\n");
 		return -3;
 	}
 
-	memset(p, 0, sizeof(struct profile));
-	p->num = profile;  // TODO: get this from stdin?
-	p->config = NULL;
-	p->junk = 1234;
-	p->start = start;
-	p->longPoll = longPoll;
-	p->shortPoll = shortPoll;
-	p->onConfig = onConfig;
+	memset(poly, 0, sizeof(struct profile));
+	poly->num = profile;  // TODO: get this from stdin?
+	poly->config = NULL;
+	poly->connected = 0;
+	poly->mqtt_info.profile_num = profile;
+	poly->mqtt_info.start = start;
+	poly->mqtt_info.longPoll = longPoll;
+	poly->mqtt_info.shortPoll = shortPoll;
+	poly->mqtt_info.onConfig = onConfig;
 
 	/* Create runtime instance with random client ID */
 	/*  client name, true, priv_data */
-	mosq = mosquitto_new(NULL, true, (void *)p);
+	mosq = mosquitto_new(NULL, true, (void *)&poly->mqtt_info);
 	if (!mosq) {
 		fprintf(stderr, "Failed to initialize a MQTT instance.\n");
 		return -1;
@@ -151,14 +143,14 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 	char msg[30];
 	char topic[30];
 	int ret;
-	struct profile *p = (struct profile *)ptr;
+	struct mqtt_priv *p = (struct mqtt_priv *)ptr;
 
-	loggerf(INFO, "Subscribing to node server profile %d\n", p->num);
+	loggerf(INFO, "Subscribing to node server profile %d\n", p->profile_num);
 
 	ret = mosquitto_subscribe(m, NULL, POLYGLOT_CONNECTION, 0);
 	loggerf(INFO, "subscribe returned %d\n", ret);
 
-	sprintf(topic, POLYGLOT_INPUT, p->num);
+	sprintf(topic, POLYGLOT_INPUT, p->profile_num);
 	mosquitto_subscribe(m, NULL, topic, 0);
 
 	//sprintf(topic, NODESERVER_TOPIC, p->num);
@@ -166,24 +158,24 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 
 	/* publish a message to kick things off */
 	// { node: this.profile, connected: true }
-	sprintf(topic, POLYGLOT_SELFCONNECTION, p->num);
-	sprintf(msg, "{\"node\": %d, \"connected\": true}", p->num);
+	sprintf(topic, POLYGLOT_SELFCONNECTION, p->profile_num);
+	sprintf(msg, "{\"node\": %d, \"connected\": true}", p->profile_num);
 	ret = mosquitto_publish(m, NULL, topic, strlen(msg), msg, 0, 0);
 	loggerf(INFO, "Published: %s\n", msg);
 
-	polyglot_connected = 1;
+	poly->connected = 1;
 }
 
 static void on_disconnect(struct mosquitto *m, void *ptr, int res)
 {
 	logger(INFO, "on_disconnect() called. MQTT connection has dropped\n");
-	polyglot_connected = 0;
+	poly->connected = 0;
 }
 
 static void on_message(struct mosquitto *m, void *ptr,
 		const struct mosquitto_message *msg)
 {
-	struct profile *p = (struct profile *)ptr;
+	struct mqtt_priv *p = (struct mqtt_priv *)ptr;
 	pthread_t thread;
 	cJSON *jmsg;
 	cJSON *key;
@@ -224,9 +216,9 @@ static void on_message(struct mosquitto *m, void *ptr,
 		key = cJSON_GetObjectItem(jmsg, "config");
 		loggerf(INFO, "config object = %s\n", cJSON_Print(key));
 		// do we need to strdup this string?
-		p->config = cJSON_Print(key);
+		poly->config = cJSON_Print(key);
 		if (p->onConfig) {
-			pthread_create(&thread, NULL, p->onConfig, (void *)p->config);
+			pthread_create(&thread, NULL, p->onConfig, (void *)poly->config);
 		}
 	} else if (cJSON_HasObjectItem(jmsg, "shortPoll")) {
 		logger(INFO, "In on_message(): payload = shortPoll\n");
