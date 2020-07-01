@@ -12,18 +12,9 @@
 #include <stdbool.h>
 #include <mosquitto.h>
 #include "cJSON.h"
+#include "c_interface.h"
 
 struct mosquitto *mosq = NULL;
-static FILE *log;
-static int debuglog = 1;
-enum LOGLEVELS {
-	CRITICAL,
-	ERROR,
-	WARNING,
-	INFO,
-	DEBUG,
-};
-static enum LOGLEVELS log_level;
 
 static void on_connect(struct mosquitto *m, void *ptr, int res);
 static void on_message(struct mosquitto *m, void *ptr,
@@ -31,61 +22,9 @@ static void on_message(struct mosquitto *m, void *ptr,
 static void on_disconnect(struct mosquitto *m, void *ptr, int res);
 static void on_publish(struct mosquitto *m, void *ptr, int mid);
 static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const int *granted);
-int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig));
-void logger(enum LOGLEVELS level, char *msg);
-void loggerf(enum LOGLEVELS level, char *fmt, ...);
 static int get_stdin_info(char **host, int *port, int *profile);
 static int get_stdin_info_test(char **host, int *port, int *profile);
-static void initialize_logging(void);
-
-void *start(void *args)
-{
-	logger(INFO, "From Logger: In Node server start function. Do something here.\n");
-	return NULL;
-}
-
-void *short_poll(void)
-{
-	logger(INFO, "In Node server short poll function. Do something here.\n");
-	return NULL;
-}
-
-void *config(void *args)
-{
-	cJSON *cfg;
-
-	logger(INFO, "In Node server config.\n");
-
-	cfg = cJSON_Parse((char *)args);
-
-	loggerf(INFO, "config: %s\n", cJSON_Print(cfg));
-
-	return NULL;
-}
-
-
-int main (int argc, char **argv)
-{
-	char *line = NULL;
-	size_t linecap = 0;
-	ssize_t linelen;
-	cJSON *msg;
-	const cJSON *key;
-	int ret;
-
-	ret = init(start, short_poll, NULL, config);
-
-	loggerf(INFO, "init returned %d\n", ret);
-	logger(INFO, "Test C node server starting\n");
-
-	/* For initial test, just wait here */
-	logger(INFO, "Node server main code starts here\n");
-	while(1)
-		sleep(1);
-
-	//mosquitto_destroy(mosq);
-	//mosquitto_lib_cleanup();
-}
+extern void initialize_logging(void);
 
 struct profile {
 	int num;
@@ -96,7 +35,6 @@ struct profile {
 	void *(*shortPoll)(void *args);
 	void *(*onConfig)(void *args);
 };
-
 
 /*
  * Initialize the link to Polyglot
@@ -311,49 +249,6 @@ static void on_publish(struct mosquitto *m, void *ptr, int res)
 	logger(INFO, "on_publish() called. Not used\n");
 }
 
-static void initialize_logging(void)
-{
-	// TODO: check if log directory exist? if not, create it
-	// TODO: What about log rotation?
-	log_level = INFO;
-
-	log = fopen("debug.log", "a");
-	if (log == NULL)
-		fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
-}
-
-void logger(enum LOGLEVELS level, char *msg)
-{
-	if (log && (level <= log_level)) {
-		fprintf(log, "%s", msg);
-		fflush(log);
-		if (debuglog)
-			fprintf(stderr, "%s", msg);
-	} else {
-		fprintf(stderr, "%s", msg);
-	}
-}
-
-void loggerf(enum LOGLEVELS level, char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	if (log && (level <= log_level)) {
-		vfprintf(log, fmt, args);
-		fflush(log);
-	} else {
-		vfprintf(stderr, fmt, args);
-	}
-	va_end(args);
-
-	if (debuglog) {
-		va_start(args, fmt);
-		vfprintf(stderr, fmt, args);
-		va_end(args);
-	}
-}
-
 static int get_stdin_info(char **host, int *port, int *profile)
 {
 	char *line = NULL;
@@ -383,6 +278,14 @@ static int get_stdin_info(char **host, int *port, int *profile)
 	return -1;
 }
 
+/*
+ * This makes testing a little easier. Using this we hard code
+ * the values that would normally be written by polyglot when it
+ * starts the node server.  By hard coding the values, we can 
+ * start the node server from the command line and not have to start
+ * it from the Polyglot dashboard.  This also means that stderr
+ * output will go the console instead of the Polyglot log.
+ */
 static int get_stdin_info_test(char **host, int *port, int *profile)
 {
 	//*host = strdup("192.158.92.11");
