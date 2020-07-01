@@ -1,36 +1,85 @@
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <mosquitto.h>
+#include "cJSON.h"
 
 struct mosquitto *mosq = NULL;
+static FILE *log;
+static int debuglog = 1;
+enum LOGLEVELS {
+	CRITICAL,
+	ERROR,
+	WARNING,
+	INFO,
+	DEBUG,
+};
+static enum LOGLEVELS log_level;
 
 static void on_connect(struct mosquitto *m, void *ptr, int res);
 static void on_message(struct mosquitto *m, void *ptr,
 		const struct mosquitto_message *msg);
-int init();
+static void on_disconnect(struct mosquitto *m, void *ptr, int res);
+static void on_publish(struct mosquitto *m, void *ptr, int mid);
+static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const int *granted);
+int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig));
+void logger(enum LOGLEVELS level, char *msg);
+void loggerf(enum LOGLEVELS level, char *fmt, ...);
+static int get_stdin_info(char **host, int *port, int *profile);
+static int get_stdin_info_test(char **host, int *port, int *profile);
+static void initialize_logging(void);
+
+void *start(void *args)
+{
+	logger(INFO, "From Logger: In Node server start function. Do something here.\n");
+	return NULL;
+}
+
+void *short_poll(void)
+{
+	logger(INFO, "In Node server short poll function. Do something here.\n");
+	return NULL;
+}
+
+void *config(void *args)
+{
+	cJSON *cfg;
+
+	logger(INFO, "In Node server config.\n");
+
+	cfg = cJSON_Parse((char *)args);
+
+	loggerf(INFO, "config: %s\n", cJSON_Print(cfg));
+
+	return NULL;
+}
+
 
 int main (int argc, char **argv)
 {
 	char *line = NULL;
 	size_t linecap = 0;
 	ssize_t linelen;
+	cJSON *msg;
+	const cJSON *key;
+	int ret;
 
-	while ((linelen = getline(&line, &linecap, stdin)) > 0)
-		fwrite(line, linelen, 1, stdout);
-	free(line);
+	ret = init(start, short_poll, NULL, config);
 
-	init();
+	loggerf(INFO, "init returned %d\n", ret);
+	logger(INFO, "Test C node server starting\n");
 
 	/* For initial test, just wait here */
-	printf("Node server main code starts here\n");
+	logger(INFO, "Node server main code starts here\n");
 	while(1)
 		sleep(1);
 
@@ -40,19 +89,47 @@ int main (int argc, char **argv)
 
 struct profile {
 	int num;
+	char *config;
+	int junk;
+	void *(*start)(void *args);
+	void *(*longPoll)(void *args);
+	void *(*shortPoll)(void *args);
+	void *(*onConfig)(void *args);
 };
+
 
 /*
  * Initialize the link to Polyglot
  */
-int init(void)
+int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 {
 	char msg[50];
 	int ret;
 	struct profile *p;
+	char *host;
+	int port;
+	int profile;
 
-	p = calloc(sizeof(p), 1);
-	p->num = 2;  // TODO: get this from stdin?
+	//if (get_stdin_info(&host, &port, &profile) != 0)
+	if (get_stdin_info_test(&host, &port, &profile) != 0)
+		return -2;
+
+	initialize_logging();
+
+	p = malloc(sizeof(struct profile));
+	if (p == NULL) {
+		fprintf(stderr, "init: memory alloction failed for struct profile\n");
+		return -3;
+	}
+
+	memset(p, 0, sizeof(struct profile));
+	p->num = profile;  // TODO: get this from stdin?
+	p->config = NULL;
+	p->junk = 1234;
+	p->start = start;
+	p->longPoll = longPoll;
+	p->shortPoll = shortPoll;
+	p->onConfig = onConfig;
 
 	/* Create runtime instance with random client ID */
 	/*  client name, true, priv_data */
@@ -63,8 +140,12 @@ int init(void)
 	}
 
 	/* Set callbacks */
+	logger(INFO, "Configure MQTT callbacks\n");
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
+	mosquitto_disconnect_callback_set(mosq, on_disconnect);
+	mosquitto_subscribe_callback_set(mosq, on_subscribe);
+	mosquitto_publish_callback_set(mosq, on_publish);
 
 	/*
 	 * This will be a secure connection.  The certificate files
@@ -78,47 +159,53 @@ int init(void)
 			  "/usr/home/bpaauwe/ssl/client.crt",
 			  "/usr/home/bpaauwe/ssl/client_private.key",
 			  NULL);
-	fprintf(stderr, "tls set returned %d\n", ret);
+	if (ret == 3) {
+		ret = mosquitto_tls_set(mosq,
+				"/var/polyglot/ssl/polyglot.crt",
+				NULL,
+				"/var/polyglot/ssl/client.crt",
+				"/var/polyglot/ssl/client_private.key",
+				NULL);
+	}
+	loggerf(INFO, "tls set returned %d\n", ret);
 	mosquitto_tls_opts_set(mosq, 0, NULL, NULL);
 
 	/* Make the connection */
 	/* TODO: Host and port should come from stdin */
-	ret = mosquitto_connect_async(mosq, "192.168.92.11", 1883, 0);
+	loggerf(INFO, "Connect to Polyglot via MQTT %s:%d\n", host, port);
+	ret = mosquitto_connect_async(mosq, host, port, 0);
 	switch (ret) {
 		case MOSQ_ERR_SUCCESS:
-			fprintf(stderr, "successful connection.\n");
+			logger(INFO, "successful connection.\n");
 			break;
 		case MOSQ_ERR_ERRNO:
-			fprintf(stderr, "can't connect: %s\n", strerror(errno));
+			loggerf(ERROR, "can't connect: %s\n", strerror(errno));
 			return -1;
 		case MOSQ_ERR_INVAL:
-			fprintf(stderr, "can't connect: invalid arguments\n");
+			logger(ERROR, "can't connect: invalid arguments\n");
 			return -1;
 		default:
-			fprintf(stderr, "can't connect: %s (%d)\n", mosquitto_strerror(ret), ret);
+			loggerf(ERROR, "can't connect: %s (%d)\n", mosquitto_strerror(ret), ret);
 			return -1;
 	}
 
-	/* Let polyglot know we're connected. */
-	/* TODO: profile number needs to come from stdin */
-	ret = mosquitto_publish(mosq, NULL, "udi/polyglot/connections/polyglot", strlen(msg), msg, 0, 0);
-
 	/* Start a thread to monitor the connection */
+	logger(INFO, "Start mosquitto loop\n");
 	ret = mosquitto_loop_start(mosq);
 	//ret = mosquitto_loop_forever(mosq, 1000, 1000);
 
+	logger(INFO, "finished with interface init\n");
 	return 0;
 }
-
 
 /*
  * Once the connection is established, subscribe to the necessary topics
  *
  * TODO: Need to have the profile number pulled from ptr.
  */
-#define POLYGLOT_TOPIC  "udi/polyglot/connections/polyglot"
-#define POLYGLOT_NS_TOPIC "udi/polyglot/connections/%d"
-#define NODESERVER_TOPIC "udi/polyglot/ns/%d"
+#define POLYGLOT_CONNECTION  "udi/polyglot/connections/polyglot"
+#define POLYGLOT_INPUT "udi/polyglot/ns/%d"
+#define POLYGLOT_SELFCONNECTION "udi/polyglot/connections/%d"
 
 static void on_connect(struct mosquitto *m, void *ptr, int res)
 {
@@ -127,33 +214,180 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 	int ret;
 	struct profile *p = (struct profile *)ptr;
 
-	printf("Subscribing to node server profile %d\n", p->num);
+	loggerf(INFO, "Subscribing to node server profile %d\n", p->num);
 
-	ret = mosquitto_subscribe(m, NULL, POLYGLOT_TOPIC, 0);
-	fprintf(stderr, "subscribe returned %d\n", ret);
+	ret = mosquitto_subscribe(m, NULL, POLYGLOT_CONNECTION, 0);
+	loggerf(INFO, "subscribe returned %d\n", ret);
 
-	sprintf(topic, POLYGLOT_NS_TOPIC, p->num);
+	sprintf(topic, POLYGLOT_INPUT, p->num);
 	mosquitto_subscribe(m, NULL, topic, 0);
 
-	sprintf(topic, NODESERVER_TOPIC, p->num);
-	mosquitto_subscribe(m, NULL, topic, 0);
+	//sprintf(topic, NODESERVER_TOPIC, p->num);
+	//mosquitto_subscribe(m, NULL, topic, 0);
 
 	/* publish a message to kick things off */
 	// { node: this.profile, connected: true }
-	sprintf(msg, "{node: %d, connected: true}", p->num);
+	sprintf(topic, POLYGLOT_SELFCONNECTION, p->num);
+	sprintf(msg, "{\"node\": %d, \"connected\": true}", p->num);
 	ret = mosquitto_publish(m, NULL, topic, strlen(msg), msg, 0, 0);
-	fprintf(stderr, "publish returned %d\n", ret);
+	loggerf(INFO, "Published: %s\n", msg);
+}
+
+static void on_disconnect(struct mosquitto *m, void *ptr, int res)
+{
+	logger(INFO, "on_disconnect() called. MQTT connection has dropped\n");
 }
 
 static void on_message(struct mosquitto *m, void *ptr,
 		const struct mosquitto_message *msg)
 {
+	struct profile *p = (struct profile *)ptr;
+	pthread_t thread;
+	cJSON *jmsg;
+	cJSON *key;
+
 	if (msg == NULL) {
 		printf("-- got NULL message\n");
 		return;
 	}
 
-	printf("-- got message @ %s: (%d, Qos %d, %s) '%s'\n",
+	loggerf(INFO, "-- got message @ %s: (%d, Qos %d, %s) '%s'\n",
 			msg->topic, msg->payloadlen, msg->qos, msg->retain ? "R" : "!r",
 			msg->payload);
+
+	// TODO: parse payload
+	jmsg = cJSON_Parse(msg->payload);
+	key = cJSON_GetObjectItemCaseSensitive(jmsg, "node");
+	loggerf(INFO, "In on_message(): node = %s\n", key->valuestring);
+	if (strcmp(key->valuestring, "polyglot") != 0) {
+		loggerf(INFO, "-- Not from polyglot, ignoring %s\n", key->valuestring);
+		return;
+	}
+
+	// What other objects can be in the message?
+	//   connected
+	//   config
+	//   shortPoll
+	//   longPoll
+	if (cJSON_HasObjectItem(jmsg, "connected")) {
+		/* call start callback */
+		loggerf(INFO, "In on_message(): connected, calling start() callback\n");
+		
+		if (p->start) {
+			int ret;
+			ret = pthread_create(&thread, NULL, p->start, NULL);
+		}
+	} else if (cJSON_HasObjectItem(jmsg, "config")) {
+		/* store config object and call onConfig */
+		key = cJSON_GetObjectItem(jmsg, "config");
+		loggerf(INFO, "config object = %s\n", cJSON_Print(key));
+		// do we need to strdup this string?
+		p->config = cJSON_Print(key);
+		if (p->onConfig) {
+			pthread_create(&thread, NULL, p->onConfig, (void *)p->config);
+		}
+	} else if (cJSON_HasObjectItem(jmsg, "shortPoll")) {
+		logger(INFO, "In on_message(): payload = shortPoll\n");
+		if (p->shortPoll)
+			pthread_create(&thread, NULL, p->shortPoll, NULL);
+	} else if (cJSON_HasObjectItem(jmsg, "longPoll")) {
+		logger(INFO, "In on_message(): payload = longPoll\n");
+		if (p->longPoll)
+			pthread_create(&thread, NULL, p->longPoll, NULL);
+	} else {
+		logger(INFO, "Message type not yet handled\n");
+	}
+
+	logger(INFO, "on_message() finished.\n");
+}
+
+static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const int *granted)
+{
+	logger(INFO, "on_subscribe() called. Not used\n");
+}
+
+static void on_publish(struct mosquitto *m, void *ptr, int res)
+{
+	logger(INFO, "on_publish() called. Not used\n");
+}
+
+static void initialize_logging(void)
+{
+	// TODO: check if log directory exist? if not, create it
+	// TODO: What about log rotation?
+	log_level = INFO;
+
+	log = fopen("debug.log", "a");
+	if (log == NULL)
+		fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
+}
+
+void logger(enum LOGLEVELS level, char *msg)
+{
+	if (log && (level <= log_level)) {
+		fprintf(log, "%s", msg);
+		fflush(log);
+		if (debuglog)
+			fprintf(stderr, "%s", msg);
+	} else {
+		fprintf(stderr, "%s", msg);
+	}
+}
+
+void loggerf(enum LOGLEVELS level, char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	if (log && (level <= log_level)) {
+		vfprintf(log, fmt, args);
+		fflush(log);
+	} else {
+		vfprintf(stderr, fmt, args);
+	}
+	va_end(args);
+
+	if (debuglog) {
+		va_start(args, fmt);
+		vfprintf(stderr, fmt, args);
+		va_end(args);
+	}
+}
+
+static int get_stdin_info(char **host, int *port, int *profile)
+{
+	char *line = NULL;
+	size_t linecap = 0;
+	ssize_t linelen;
+	cJSON *msg;
+	const cJSON *key;
+
+	linelen = getline(&line, &linecap, stdin);
+	if (linelen > 0) {
+		msg = cJSON_Parse(line);
+		key = cJSON_GetObjectItemCaseSensitive(msg, "mqttHost");
+		*host = malloc(strlen(key->valuestring) + 1);
+		strcpy(*host, key->valuestring);
+
+		key = cJSON_GetObjectItemCaseSensitive(msg, "mqttPort");
+		*port = atoi(key->valuestring);
+
+		key = cJSON_GetObjectItemCaseSensitive(msg, "profileNum");
+		*profile = atoi(key->valuestring);
+
+		cJSON_Delete(msg);
+		free(line);
+		return 0;
+	}
+	free(line);
+	return -1;
+}
+
+static int get_stdin_info_test(char **host, int *port, int *profile)
+{
+	//*host = strdup("192.158.92.11");
+	*host = strdup("localhost");
+	*port = 1883;
+	*profile = 17;
+	return 0;
 }
