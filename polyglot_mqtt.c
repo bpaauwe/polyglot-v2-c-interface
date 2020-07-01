@@ -15,6 +15,7 @@
 #include "c_interface.h"
 
 struct mosquitto *mosq = NULL;
+int polyglot_connected = 0;
 
 static void on_connect(struct mosquitto *m, void *ptr, int res);
 static void on_message(struct mosquitto *m, void *ptr,
@@ -169,11 +170,14 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 	sprintf(msg, "{\"node\": %d, \"connected\": true}", p->num);
 	ret = mosquitto_publish(m, NULL, topic, strlen(msg), msg, 0, 0);
 	loggerf(INFO, "Published: %s\n", msg);
+
+	polyglot_connected = 1;
 }
 
 static void on_disconnect(struct mosquitto *m, void *ptr, int res)
 {
 	logger(INFO, "on_disconnect() called. MQTT connection has dropped\n");
+	polyglot_connected = 0;
 }
 
 static void on_message(struct mosquitto *m, void *ptr,
