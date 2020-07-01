@@ -26,7 +26,19 @@ void *start(void *args)
 
 void *short_poll(void)
 {
+	char *cfg; 
+
 	logger(INFO, "In Node server short poll function. Do something here.\n");
+	if (isConnected())
+		logger(INFO, "Connected to Polyglot\n");
+	else
+		logger(INFO, "Not connected to Polyglot\n");
+
+
+	cfg = getConfig();
+	loggerf(INFO, "dump current config = %s\n", cfg);
+	free(cfg);
+
 	return NULL;
 }
 
