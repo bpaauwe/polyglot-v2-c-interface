@@ -18,3 +18,5 @@ void logger(enum LOGLEVELS level, char *msg);
 void loggerf(enum LOGLEVELS level, char *fmt, ...);
 
 int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig));
+int isConnected(void);
+char *getConfig(void);
