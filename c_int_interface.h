@@ -19,3 +19,5 @@ struct profile {
 	struct mqtt_priv mqtt_info;
 };
 
+void poly_send(cJSON *msg);
+

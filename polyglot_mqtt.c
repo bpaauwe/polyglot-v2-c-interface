@@ -129,14 +129,35 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	return 0;
 }
 
+#define POLYGLOT_CONNECTION  "udi/polyglot/connections/polyglot"
+#define POLYGLOT_INPUT "udi/polyglot/ns/%d"
+#define POLYGLOT_SELFCONNECTION "udi/polyglot/connections/%d"
+
+void poly_send(cJSON *msg)
+{
+	cJSON *node;
+	char *msg_str;
+	char topic[30];
+	int ret;
+
+	if (!cJSON_HasObjectItem(msg, "node")) {
+		node = cJSON_CreateNumber(poly->num);
+		cJSON_AddItemToObject(msg, "node", node);
+	}
+
+	sprintf(topic, POLYGLOT_SELFCONNECTION, poly->num);
+	msg_str = cJSON_PrintUnformatted(msg);
+	loggerf(INFO, "Publishing '%s' to %s\n", msg_str, topic);
+	ret = mosquitto_publish(mosq, NULL, topic, strlen(msg_str), msg_str, 0, 0);
+	if (ret)
+		logger(ERROR, "Failed to publish message to Polyglot\n");
+}
+
 /*
  * Once the connection is established, subscribe to the necessary topics
  *
  * TODO: Need to have the profile number pulled from ptr.
  */
-#define POLYGLOT_CONNECTION  "udi/polyglot/connections/polyglot"
-#define POLYGLOT_INPUT "udi/polyglot/ns/%d"
-#define POLYGLOT_SELFCONNECTION "udi/polyglot/connections/%d"
 
 static void on_connect(struct mosquitto *m, void *ptr, int res)
 {
@@ -215,7 +236,9 @@ static void on_message(struct mosquitto *m, void *ptr,
 		/* store config object and call onConfig */
 		key = cJSON_GetObjectItem(jmsg, "config");
 		loggerf(INFO, "config object = %s\n", cJSON_Print(key));
-		// do we need to strdup this string?
+
+		// TODO: do we need to strdup this string?
+		// TODO: can we determine what has changed before saving it?
 		poly->config = cJSON_Print(key);
 		if (p->onConfig) {
 			pthread_create(&thread, NULL, p->onConfig, (void *)poly->config);
