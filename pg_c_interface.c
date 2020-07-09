@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
@@ -59,6 +60,124 @@ char *getConfig(void)
  *   - linked list of key/value pairs. Most effort here, but possibly easy
  *     for caller.  Would need a key/value struct type.
  */
+
+static int _save_data(char *key, struct pair *params, int add)
+{
+	cJSON *cfg;
+	cJSON *item;
+	cJSON *c_params;
+	cJSON *obj;
+	int i;
+
+	if (add) {
+		cfg = cJSON_Parse(poly->config);
+		c_params = cJSON_DetachItemFromObject(cfg, "customParams");
+	} else {
+		c_params = cJSON_CreateObject();
+	}
+
+	while (params) {
+		// Create a new object and add it to c_params?
+		cJSON_AddStringToObject(c_params, params->key, params->value);
+		params = params->next;
+	}
+
+	i = 0;
+	while (key[i]) {
+		tolower(key[i]);
+		i++;
+	}
+
+	loggerf(INFO, "New %s  = %s\n", key, cJSON_Print(c_params));
+
+	/* Send new c_params object to Polyglot */
+	obj = cJSON_CreateObject();
+	cJSON_AddItemToObject(obj, key, c_params);
+	poly_send(obj);
+	cJSON_Delete(obj);
+
+	if (add)
+		cJSON_Delete(cfg);
+
+	return 0;
+}
+
+static char *_get_data(char *dtype, char *key)
+{
+	cJSON *cfg;
+	cJSON *params;
+	cJSON *item;
+	char *value = NULL;
+	int i;
+
+	cfg = cJSON_Parse(poly->config);
+	params = cJSON_GetObjectItem(cfg, dtype);
+	if (cJSON_IsObject(params)) {
+		for (i = 0; i < cJSON_GetArraySize(params); i++) {
+			item = cJSON_GetArrayItem(params, i);
+			if (strcmp(item->string, key) == 0) {
+				value = strdup(item->valuestring);
+			}
+		}
+	}
+
+	cJSON_Delete(cfg);
+
+	return value;
+}
+
+static int _remove_data(char *dtype, char *key)
+{
+	cJSON *cfg;
+	cJSON *item;
+	cJSON *update;
+	cJSON *params;
+	cJSON *obj;
+	int i;
+
+	cfg = cJSON_Parse(poly->config);
+
+	update = cJSON_CreateObject();
+	params = cJSON_DetachItemFromObject(cfg, dtype);
+	if (cJSON_IsObject(params)) {
+		for (i = 0; i < cJSON_GetArraySize(params); i++) {
+			item = cJSON_GetArrayItem(params, i);
+			if (strcmp(item->string, key) != 0)
+				cJSON_AddStringToObject(update, item->string, item->valuestring);
+		}
+	}
+
+	i = 0;
+	while (dtype[i]) {
+		tolower(dtype[i]);
+		i++;
+	}
+
+	/* Send updated object to Polyglot */
+	obj = cJSON_CreateObject();
+	cJSON_AddItemToObject(obj, dtype, update);
+	loggerf(INFO, "Updating %s = %s\n", dtype, cJSON_Print(obj));
+	poly_send(obj);
+	cJSON_Delete(obj);
+	cJSON_Delete(update);
+	cJSON_Delete(cfg);
+
+	return 0;
+}
+
+void freeCustomPairs(struct pair *params)
+{
+	struct pair *p;
+	
+	while (params) {
+		free(params->key);
+		free(params->value);
+		p = params->next;
+		free(params);
+		params = p;
+	}
+}
+
 struct pair *getCustomParams(void)
 {
 	cJSON *cfg;
@@ -94,41 +213,14 @@ struct pair *getCustomParams(void)
 	return p;
 }
 
+/*
+ * getCustomParam
+ *
+ * Get the value of a key in the custom parameter set.
+ */
 char *getCustomParam(char *key)
 {
-	cJSON *cfg;
-	cJSON *params;
-	cJSON *item;
-	char *value = NULL;
-	int i;
-
-	cfg = cJSON_Parse(poly->config);
-	params = cJSON_GetObjectItem(cfg, "customParams");
-	if (cJSON_IsObject(params)) {
-		for (i = 0; i < cJSON_GetArraySize(params); i++) {
-			item = cJSON_GetArrayItem(params, i);
-			if (strcmp(item->string, key) == 0) {
-				value = strdup(item->valuestring);
-			}
-		}
-	}
-
-	cJSON_Delete(cfg);
-
-	return value;
-}
-
-void freeCustomParams(struct pair *params)
-{
-	struct pair *p;
-	
-	while (params) {
-		free(params->key);
-		free(params->value);
-		p = params->next;
-		free(params);
-		params = p;
-	}
+	return _get_data("customParams", key);
 }
 
 /*
@@ -139,7 +231,7 @@ void freeCustomParams(struct pair *params)
  */
 int saveCustomParams(struct pair *params)
 {
-	return 0;
+	return _save_data("customParams", params, 0);
 }
 
 /*
@@ -150,30 +242,7 @@ int saveCustomParams(struct pair *params)
  */
 int addCustomParams(struct pair *params)
 {
-	cJSON *cfg;
-	cJSON *item;
-	cJSON *c_params;
-	cJSON *obj;
-
-	cfg = cJSON_Parse(poly->config);
-	c_params = cJSON_DetachItemFromObject(cfg, "customParams");
-	while (params) {
-		// Create a new object and add it to c_params?
-		cJSON_AddStringToObject(c_params, params->key, params->value);
-		params = params->next;
-	}
-
-	loggerf(INFO, "New custom params = %s\n", cJSON_Print(c_params));
-
-	/* Send new c_params object to Polyglot */
-	obj = cJSON_CreateObject();
-	cJSON_AddItemToObject(obj, "customparams", c_params);
-	poly_send(obj);
-	cJSON_Delete(obj);
-
-	cJSON_Delete(cfg);
-
-	return 0;
+	return _save_data("customParams", params, 1);
 }
 
 /*
@@ -184,33 +253,47 @@ int addCustomParams(struct pair *params)
  */
 int removeCustomParam(char *key)
 {
-	cJSON *cfg;
-	cJSON *item;
-	cJSON *update;
-	cJSON *params;
-	cJSON *obj;
-	int i;
+	return _remove_data("customParams", key);
+}
 
-	cfg = cJSON_Parse(poly->config);
+/*
+ * saveCustomData
+ *
+ * Replace the existing custom data config with a new
+ * list of key/value pairs.
+ */
+int saveCustomData(struct pair *params)
+{
+	return _save_data("customData", params, 0);
+}
 
-	update = cJSON_CreateObject();
-	params = cJSON_DetachItemFromObject(cfg, "customParams");
-	if (cJSON_IsObject(params)) {
-		for (i = 0; i < cJSON_GetArraySize(params); i++) {
-			item = cJSON_GetArrayItem(params, i);
-			if (strcmp(item->string, key) != 0)
-				cJSON_AddStringToObject(update, item->string, item->valuestring);
-		}
-	}
+/*
+ * addCustomData
+ *
+ * Add additional custom data to the existing set of 
+ * custom data.
+ */
+int addCustomData(struct pair *params)
+{
+	return _save_data("customData", params, 1);
+}
 
-	/* Send updated params object to Polyglot */
-	obj = cJSON_CreateObject();
-	cJSON_AddItemToObject(obj, "customparams", update);
-	loggerf(INFO, "Updating custom paramters = %s\n", cJSON_Print(obj));
-	poly_send(obj);
-	cJSON_Delete(obj);
-	cJSON_Delete(update);
-	cJSON_Delete(cfg);
+/*
+ * getCustomData
+ *
+ * Get the value of a key in the custom data set.
+ */
+char *getCustomData(char *key)
+{
+	return _get_data("customData", key);
+}
 
-	return 0;
+/*
+ * removeCustomData
+ *
+ * Remove a single custom data based on the data key.
+ */
+int removeCustomData(char *key)
+{
+	return _remove_data("customData", key);
 }

@@ -37,7 +37,7 @@ void *short_poll(void)
 		loggerf(INFO, "Parameters: %s = %s\n", t->key, t->value);
 		t = t->next;
 	}
-	freeCustomParams(p);
+	freeCustomPairs(p);
 	// TODO: free p
 
 	return NULL;

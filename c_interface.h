@@ -30,9 +30,13 @@ int isConnected(void);
 char *getConfig(void);
 struct pair *getCustomParams(void);
 char *getCustomParam(char *key);
-void freeCustomParams(struct pair *params);
 int saveCustomParams(struct pair *params);
 int addCustomParams(struct pair *params);
 int removeCustomParam(char *key);
+char *getCustomData(char *key);
+int saveCustomData(struct pair *params);
+int addCustomData(struct pair *params);
+int removeCustomData(char *key);
+void freeCustomPairs(struct pair *params);
 
 
