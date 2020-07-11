@@ -17,6 +17,7 @@ struct profile {
 	char *config;
 	int connected;
 	struct mqtt_priv mqtt_info;
+	struct node *nodelist;
 };
 
 void poly_send(cJSON *msg);

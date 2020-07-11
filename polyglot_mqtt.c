@@ -61,6 +61,7 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	poly->mqtt_info.longPoll = longPoll;
 	poly->mqtt_info.shortPoll = shortPoll;
 	poly->mqtt_info.onConfig = onConfig;
+	poly->nodelist = NULL;
 
 	/* Create runtime instance with random client ID */
 	/*  client name, true, priv_data */

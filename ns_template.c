@@ -22,7 +22,20 @@ static int configured = 0;
 
 void *start(void *args)
 {
+	struct node *n;
+
 	logger(INFO, "In Node server start function. Do something here.\n");
+
+	n = allocNode("node_id", "primary", "address", "my_node");
+	addDriver(n, "ST", "1", 2);
+	addDriver(n, "GV0", "34", 14);
+	addDriver(n, "GV1", "0",  17);
+	addNode(n);
+
+	n = allocNode("node_id", "primary", "address2", "my_2nd_node");
+	addDriver(n, "ST", "1", 2);
+	//addNode(n);
+
 	return NULL;
 }
 
