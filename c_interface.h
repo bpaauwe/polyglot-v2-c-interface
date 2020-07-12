@@ -85,7 +85,7 @@ void freeCustomPairs(struct pair *params);
 struct node *allocNode(char *id, char *primary, char *address, char *name);
 void addDriver(struct node *n, char *driver, char *init, int uom);
 void addNode(struct node *n);
-int delNode();
-int getNode();
-int getNodes();
+void delNode(char *address);
+struct node *getNode(char * address);
+struct node *getNodes(void);
 

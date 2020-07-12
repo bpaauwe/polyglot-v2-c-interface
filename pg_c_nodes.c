@@ -19,6 +19,22 @@
 extern struct mosquitto *mosq;
 extern struct profile *poly;
 
+static void free_node(struct node *n)
+{
+	logger(INFO, "Starting node free process\n");
+	if (n->drivers)
+		free(n->drivers);
+	if (n->commands)
+		free(n->commands);
+	if (n->sends)
+		free(n->sends);
+
+	logger(INFO, "Freeing node\n");
+	free(n);
+
+	return;
+}
+
 void node_set_driver(struct node *n, char *driver, char *value, int report, int force, int uom)
 {
 	struct driver *d;
@@ -214,4 +230,94 @@ void addNode(struct node *n)
 	cJSON_Delete(obj);
 
 	return;
+}
+
+/*
+ * delNode
+ *
+ * Delete a node from the internal list and ask polyglot to
+ * also delete the node.
+ */
+void delNode(char *address)
+{
+	struct node *tmp;
+	struct node *prev;
+	cJSON *obj, *addr;
+
+	/* Ask polyglot to delete the node */
+	obj = cJSON_CreateObject();
+	addr = cJSON_CreateObject();
+	cJSON_AddStringToObject(addr, "address", address);
+	cJSON_AddItemToObject(obj, "removenode", addr);
+	logger(INFO, "calling polyglot to delete node\n");
+	poly_send(obj);
+	cJSON_Delete(obj);
+
+
+	/* Delete node from internal node list */
+	logger(INFO, "Delete node from node list\n");
+	if (poly->nodelist) {
+		logger(INFO, "node list exists and not null\n");
+		tmp = poly->nodelist;
+		if (strcmp(tmp->address, address) == 0) {
+			logger(INFO, "first node is the one to delete\n");
+			poly->nodelist = tmp->next;
+			logger(INFO, "Calling free_node\n");
+			free_node(tmp);
+		} else {
+			logger(INFO, "walking list looking for node to delete\n");
+			prev = tmp;
+			tmp = tmp->next;
+			while (tmp->next) {
+				if (strcmp(tmp->address, address) == 0) {
+					prev->next = tmp->next;
+					logger(INFO, "found node, calling free_node\n");
+					free_node(tmp);
+				}
+				tmp = tmp->next;
+			}
+			logger(INFO, "Finished walking list\n");
+		}
+	}
+	logger(INFO, "Node deletion finished\n");
+	return;
+}
+
+/*
+ * getNode
+ *
+ * Retrieve a specific node by address.
+ *
+ * Python version returns the node 'dictionary' from the config. I think
+ * this should return a pointer to the node structure.
+ *
+ * Returns pointer to node structure.
+ */
+struct node *getNode(char *address)
+{
+	struct node *tmp;
+
+	if (poly->nodelist) {
+		tmp = poly->nodelist;
+		while (tmp) {
+			if (strcmp(tmp->address, address) == 0)
+				return tmp;
+			tmp = tmp->next;
+		}
+		loggerf(ERROR, "Node address %s does not exist in node list\n", address);
+	} else {
+		logger(ERROR, "Node list does not exist.\n");
+	}
+
+	return NULL;
+}
+
+/*
+ * getNodes
+ *
+ * Return a pointer to the node list
+ */
+struct node *getNodes(void)
+{
+	return poly->nodelist;
 }

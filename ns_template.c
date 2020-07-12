@@ -34,7 +34,9 @@ void *start(void *args)
 
 	n = allocNode("node_id", "primary", "address2", "my_2nd_node");
 	addDriver(n, "ST", "1", 2);
-	//addNode(n);
+	addNode(n);
+
+	delNode("address");
 
 	return NULL;
 }
