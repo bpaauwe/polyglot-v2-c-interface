@@ -110,6 +110,8 @@ struct node *allocNode(char *id, char *primary, char *address, char *name)
 	if (!new_node)
 		return NULL;
 
+	memset(new_node, 0, sizeof(struct node));
+
 	new_node->id = id;
 	new_node->name = name;
 
@@ -131,6 +133,7 @@ struct node *allocNode(char *id, char *primary, char *address, char *name)
 	new_node->command_cnt = 0;
 	new_node->send_cnt = 0;
 	new_node->drivers = NULL;
+	new_node->next = NULL;
 
 	return new_node;
 }
@@ -268,7 +271,7 @@ void delNode(char *address)
 			logger(INFO, "walking list looking for node to delete\n");
 			prev = tmp;
 			tmp = tmp->next;
-			while (tmp->next) {
+			while (tmp) {
 				if (strcmp(tmp->address, address) == 0) {
 					prev->next = tmp->next;
 					logger(INFO, "found node, calling free_node\n");
