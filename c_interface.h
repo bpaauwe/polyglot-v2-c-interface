@@ -88,4 +88,9 @@ void addNode(struct node *n);
 void delNode(char *address);
 struct node *getNode(char * address);
 struct node *getNodes(void);
+void addNotice(char *key, char *text);
+void addNoticeTemp(char *key, char *text);
+void removeNotice(char *key);
+void removeNoticesAll(void);
+struct pair *getNotices(void);
 

@@ -38,6 +38,8 @@ void *start(void *args)
 
 	delNode("address");
 
+	addNotice("test", "Notice test. this is a new notice");
+
 	return NULL;
 }
 
@@ -78,6 +80,7 @@ void *long_poll(void)
 		free(cfg);
 	}
 
+	removeNoticesAll();
 	return NULL;
 }
 
