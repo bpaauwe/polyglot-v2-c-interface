@@ -88,3 +88,22 @@ void installProfile(void)
 
 	return;
 }
+
+/*
+ * restart
+ *
+ * Ask Polygot to restart this node server.
+ */
+void restart(void)
+{
+	cJSON *msg, *body;
+
+	logger(INFO, "Asking Polyglot to restart me..\n");
+	body = cJSON_CreateObject();
+	msg = cJSON_CreateObject();
+	cJSON_AddItemToObject(msg, "restart", body);
+	poly_send(msg);
+	cJSON_Delete(msg);
+
+	return;
+}

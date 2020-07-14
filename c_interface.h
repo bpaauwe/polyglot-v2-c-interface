@@ -100,4 +100,5 @@ void removeNoticesAll(void);
 struct pair *getNotices(void);
 void setCustomParamsDoc(void);
 void updateProfile(void);
+void restart(void);
 
