@@ -56,6 +56,7 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	poly->num = profile;  // TODO: get this from stdin?
 	poly->config = NULL;
 	poly->connected = 0;
+	poly->custom_config_doc_sent = 0;
 	poly->mqtt_info.profile_num = profile;
 	poly->mqtt_info.start = start;
 	poly->mqtt_info.longPoll = longPoll;
@@ -237,6 +238,8 @@ static void on_message(struct mosquitto *m, void *ptr,
 		/* store config object and call onConfig */
 		key = cJSON_GetObjectItem(jmsg, "config");
 		loggerf(INFO, "config object = %s\n", cJSON_Print(key));
+
+		setCustomParamsDoc();
 
 		// TODO: do we need to strdup this string?
 		// TODO: can we determine what has changed before saving it?

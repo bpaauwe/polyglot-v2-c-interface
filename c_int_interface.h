@@ -16,6 +16,7 @@ struct profile {
 	int num;
 	char *config;
 	int connected;
+	int custom_config_doc_sent;
 	struct mqtt_priv mqtt_info;
 	struct node *nodelist;
 };

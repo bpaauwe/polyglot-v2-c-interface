@@ -97,4 +97,6 @@ void addNoticeTemp(char *key, char *text);
 void removeNotice(char *key);
 void removeNoticesAll(void);
 struct pair *getNotices(void);
+void setCustomParamsDoc(void);
+void updateProfile(void);
 
