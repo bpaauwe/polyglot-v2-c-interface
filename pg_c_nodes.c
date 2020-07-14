@@ -75,14 +75,41 @@ void node_report_driver(struct node *n, char *drv, int changed, int force)
 				cJSON_AddStringToObject(status, "driver", d->driver);
 				cJSON_AddStringToObject(status, "value", d->value);
 				cJSON_AddNumberToObject(status, "uom", d->uom);
+
 				obj = cJSON_CreateObject();
 				cJSON_AddItemToObject(obj, "status", status);
+
 				poly_send(obj);
+
 				cJSON_Delete(obj);
 			}
 			return;
 		}
 		d++;
+	}
+	return;
+}
+
+void node_report_drivers(struct node *n)
+{
+	int cnt;
+	cJSON *obj;
+	cJSON *status;
+
+	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
+		/* Create message and send */
+		status = cJSON_CreateObject();
+		cJSON_AddStringToObject(status, "address", n->address);
+		cJSON_AddStringToObject(status, "driver", n->drivers[cnt].driver);
+		cJSON_AddStringToObject(status, "value", n->drivers[cnt].value);
+		cJSON_AddNumberToObject(status, "uom", n->drivers[cnt].uom);
+
+		obj = cJSON_CreateObject();
+		cJSON_AddItemToObject(obj, "status", status);
+
+		poly_send(obj);
+
+		cJSON_Delete(obj);
 	}
 	return;
 }
@@ -120,6 +147,7 @@ static void node_report_cmd(struct node *n, char *sends, char *value, int uom)
 static const struct node_ops node_functions = {
 	.setDriver = node_set_driver,
 	.reportDriver = node_report_driver,
+	.reportDrivers = node_report_drivers,
 	.reportCmd = node_report_cmd,
 };
 
