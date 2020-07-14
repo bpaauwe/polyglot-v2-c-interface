@@ -33,17 +33,20 @@ struct driver {
 
 struct command {
 	char *id;
+	void (*callback)(char *cmd, char *value, int uom);
 };
 
 struct send {
 	char *id;
+	void (*callback)(char *cmd, char *value, int uom);
 };
 
 struct node;
 
 struct node_ops {
 	void (*setDriver)(struct node *n, char *driver, char *value, int report, int force, int uom);	
-	void (*reportDriver)(struct node *n, struct driver *d, int changed, int force);	
+	void (*reportDriver)(struct node *n, char *driver, int changed, int force);	
+	void (*reportCmd)(struct node *n, char *send, char *value, int uom);	
 };
 
 
@@ -84,6 +87,7 @@ int removeCustomData(char *key);
 void freeCustomPairs(struct pair *params);
 struct node *allocNode(char *id, char *primary, char *address, char *name);
 void addDriver(struct node *n, char *driver, char *init, int uom);
+void addCommand(struct node *n, char *cmd_id, void (*callback)());
 void addNode(struct node *n);
 void delNode(char *address);
 struct node *getNode(char * address);

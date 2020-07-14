@@ -50,7 +50,7 @@ void node_set_driver(struct node *n, char *driver, char *value, int report, int 
 			d->value = value;
 			d->uom = uom;
 			if (report)
-				n->ops.reportDriver(n, d, changed, force);
+				n->ops.reportDriver(n, d->driver, changed, force);
 			return;
 		}
 		d++;
@@ -58,17 +58,16 @@ void node_set_driver(struct node *n, char *driver, char *value, int report, int 
 	return;
 }
 
-void node_report_driver(struct node *n, struct driver *drv, int changed, int force)
+void node_report_driver(struct node *n, char *drv, int changed, int force)
 {
 	struct driver *d;
 	int cnt;
 	cJSON *obj;
 	cJSON *status;
 
-	logger(INFO, "TODO: node_report_driver implementation\n");
 	d = n->drivers;
 	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
-		if (strcmp(d->driver, drv->driver) == 0) {
+		if (strcmp(d->driver, drv) == 0) {
 			if (changed || force) {
 				/* Create message and send */
 				status = cJSON_CreateObject();
@@ -88,9 +87,40 @@ void node_report_driver(struct node *n, struct driver *drv, int changed, int for
 	return;
 }
 
+static void node_report_cmd(struct node *n, char *sends, char *value, int uom)
+{
+	struct send *s;
+	int cnt;
+	cJSON *obj;
+	cJSON *cmd;
+
+	s = n->sends;
+	/* look up command in sends array */
+	for (cnt = 0; cnt < n->send_cnt; cnt++) {
+		if (strcmp(s->id, sends) == 0) {
+			/* Create message and send */
+			cmd = cJSON_CreateObject();
+			cJSON_AddStringToObject(cmd, "address", n->address);
+			cJSON_AddStringToObject(cmd, "command", s->id);
+			cJSON_AddNumberToObject(cmd, "uom", uom);
+			if (value) 
+				cJSON_AddStringToObject(cmd, "value", value);
+
+			obj = cJSON_CreateObject();
+			cJSON_AddItemToObject(obj, "command", cmd);
+			poly_send(obj);
+			cJSON_Delete(obj);
+			return;
+		}
+		s++;
+	}
+	return;
+}
+
 static const struct node_ops node_functions = {
 	.setDriver = node_set_driver,
 	.reportDriver = node_report_driver,
+	.reportCmd = node_report_cmd,
 };
 
 
@@ -177,6 +207,61 @@ void addDriver(struct node *n, char *driver, char *init, int uom)
 
 	return;
 }
+
+/*
+ * addCommand
+ *
+ * add a command to the node's command list.
+ */
+void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
+{
+	struct command *c;
+	struct command *nc;
+	int cnt = 0;
+
+	cnt = n->command_cnt;
+	loggerf(INFO, "node %s has %d commands\n", n->name, n->command_cnt);
+
+	nc = calloc(cnt + 1, sizeof(struct command));
+	memcpy(nc, n->commands, (cnt * sizeof(struct command)));
+
+	nc[cnt].id = cmd_id;
+	nc[cnt].callback = callback;
+	
+	free(n->commands);
+	n->commands = nc;
+	n->command_cnt++;
+
+	return;
+}
+
+/*
+ * addSend
+ *
+ * add a command that gets sent to the node's sent list.
+ */
+void addSend(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
+{
+	struct send *c;
+	struct send *nc;
+	int cnt = 0;
+
+	cnt = n->send_cnt;
+	loggerf(INFO, "node %s has %d sends\n", n->name, n->send_cnt);
+
+	nc = calloc(cnt + 1, sizeof(struct send));
+	memcpy(nc, n->sends, (cnt * sizeof(struct send)));
+
+	nc[cnt].id = cmd_id;
+	nc[cnt].callback = callback;
+	
+	free(n->sends);
+	n->sends = nc;
+	n->send_cnt++;
+
+	return;
+}
+
 
 /*
  * addNode
@@ -323,4 +408,63 @@ struct node *getNode(char *address)
 struct node *getNodes(void)
 {
 	return poly->nodelist;
+}
+
+/*
+ * node_cmd_exec
+ *
+ * An internal function that executes a node command by
+ * looking up the command in the node's command list and
+ * calling the command callback.
+ */
+void *node_cmd_exec(void *args)
+{
+	cJSON *msg = (cJSON *)args;
+	cJSON *addr, *cmd, *value, *uom, *str;
+	struct node *tmp;
+	int i;
+
+	addr = cJSON_GetObjectItem(msg, "address");
+	cmd = cJSON_GetObjectItem(msg, "cmd");
+	if (!cJSON_HasObjectItem(msg, "value"))
+		cJSON_AddStringToObject(msg, "value", "");
+	value = cJSON_GetObjectItem(msg, "value");
+
+	if (!cJSON_HasObjectItem(msg, "uom"))
+		cJSON_AddStringToObject(msg, "uom", "0");
+	uom = cJSON_GetObjectItem(msg, "uom");
+
+	loggerf(INFO, ">>>> Process command %s\n", cJSON_Print(msg));
+
+	if (poly->nodelist) {
+		tmp = poly->nodelist;
+		while (tmp) {
+			if (strcmp(tmp->address, addr->valuestring) == 0) {
+				// Look up command in command list
+				loggerf(INFO, ">>>> Look up command %s\n", cmd->valuestring);
+				// call command callback with cmd->valuestring, value->valuestring, and
+				// uom->valuestring
+				loggerf(INFO, ">>>> command array: %d\n", tmp->command_cnt);
+				for (i = 0; i < tmp->command_cnt; i++) {
+					if (strcmp(tmp->commands[i].id, cmd->valuestring) == 0) {
+						int iuom = 0;
+
+						if (uom->valuestring)
+							iuom = atoi(uom->valuestring);
+
+						loggerf(INFO, "callback(%s, %s, %d)\n",
+								cmd->valuestring,
+								value->valuestring,
+								iuom);
+						tmp->commands[i].callback(cmd->valuestring,
+								value->valuestring, iuom);
+					}
+				}
+				return NULL;
+			}
+			tmp = tmp->next;
+		}
+	}
+
+	return NULL;
 }

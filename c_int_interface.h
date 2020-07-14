@@ -21,4 +21,5 @@ struct profile {
 };
 
 void poly_send(cJSON *msg);
+void *node_cmd_exec(void *args);
 

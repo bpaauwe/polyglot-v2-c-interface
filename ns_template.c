@@ -19,6 +19,12 @@
 #include "c_interface.h"
 
 static int configured = 0;
+static int gv1 = 0;
+
+static void process_cmd(char *id, char *value, int uom)
+{
+	loggerf(INFO, "*** Process Command: %s, %s, %d\n", id, value, uom);
+}
 
 void *start(void *args)
 {
@@ -26,10 +32,16 @@ void *start(void *args)
 
 	logger(INFO, "In Node server start function. Do something here.\n");
 
-	n = allocNode("node_id", "primary", "address", "my_node");
+	n = allocNode("dsc", "dsc_1", "dsc_1", "my_node");
 	addDriver(n, "ST", "1", 2);
 	addDriver(n, "GV0", "34", 14);
 	addDriver(n, "GV1", "0",  17);
+	addDriver(n, "GV2", "0",  17);
+	addDriver(n, "GV3", "0",  17);
+	addDriver(n, "GV4", "0",  17);
+	addDriver(n, "GV5", "0",  17);
+	addCommand(n, "UPDATE_PROFILE", process_cmd);
+	addCommand(n, "DEBUG", process_cmd);
 	addNode(n);
 
 	n = allocNode("node_id", "primary", "address2", "my_2nd_node");
@@ -45,7 +57,9 @@ void *start(void *args)
 
 void *short_poll(void)
 {
+	struct node *n;
 	struct pair *p, *t;
+	char *v = NULL;
 	logger(INFO, "In Node server short poll function. Get custom parameters.\n");
 
 	p = getCustomParams();
@@ -56,6 +70,13 @@ void *short_poll(void)
 	}
 	freeCustomPairs(p);
 	// TODO: free p
+
+	// Test setting a node driver
+	gv1++;
+	n = getNode("dsc_1");
+	asprintf(&v, "%d", gv1);
+	n->ops.setDriver(n, "GV1", v, 1, 1, 17);
+	free(v);
 
 	return NULL;
 }

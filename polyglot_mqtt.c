@@ -252,7 +252,13 @@ static void on_message(struct mosquitto *m, void *ptr,
 		logger(INFO, "In on_message(): payload = longPoll\n");
 		if (p->longPoll)
 			pthread_create(&thread, NULL, p->longPoll, NULL);
+	} else if (cJSON_HasObjectItem(jmsg, "command")) {
+		// Looks like {"address":node_address, "cmd":command_id, "query": {}}
+		// How do we handle a command?
+		cJSON *cmd = cJSON_GetObjectItem(jmsg, "command");
+		pthread_create(&thread, NULL, node_cmd_exec, (void *)cmd);
 	} else {
+		// command, result, query, status, delete
 		logger(INFO, "Message type not yet handled\n");
 	}
 
