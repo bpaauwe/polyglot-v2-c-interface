@@ -34,7 +34,6 @@ extern void initialize_logging(void);
  */
 int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 {
-	char msg[50];
 	int ret;
 	char *host;
 	int port;
@@ -167,6 +166,7 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 	char topic[30];
 	int ret;
 	struct mqtt_priv *p = (struct mqtt_priv *)ptr;
+	(void)res;
 
 	loggerf(INFO, "Subscribing to node server profile %d\n", p->profile_num);
 
@@ -191,6 +191,10 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 
 static void on_disconnect(struct mosquitto *m, void *ptr, int res)
 {
+	(void)m;
+	(void)ptr;
+	(void)res;
+
 	logger(INFO, "on_disconnect() called. MQTT connection has dropped\n");
 	poly->connected = 0;
 }
@@ -202,6 +206,7 @@ static void on_message(struct mosquitto *m, void *ptr,
 	pthread_t thread;
 	cJSON *jmsg;
 	cJSON *key;
+	(void)m;
 
 	if (msg == NULL) {
 		printf("-- got NULL message\n");
@@ -270,11 +275,21 @@ static void on_message(struct mosquitto *m, void *ptr,
 
 static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const int *granted)
 {
+	(void)m;
+	(void)ptr;
+	(void)mid;
+	(void)qos;
+	(void)granted;
+
 	logger(INFO, "on_subscribe() called. Not used\n");
 }
 
 static void on_publish(struct mosquitto *m, void *ptr, int res)
 {
+	(void)m;
+	(void)ptr;
+	(void)res;
+
 	logger(INFO, "on_publish() called. Not used\n");
 }
 

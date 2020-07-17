@@ -35,7 +35,7 @@ static void free_node(struct node *n)
 	return;
 }
 
-void node_set_driver(struct node *n, char *driver, char *value, int report, int force, int uom)
+static void node_set_driver(struct node *n, char *driver, char *value, int report, int force, int uom)
 {
 	struct driver *d;
 	int cnt;
@@ -58,7 +58,7 @@ void node_set_driver(struct node *n, char *driver, char *value, int report, int 
 	return;
 }
 
-void node_report_driver(struct node *n, char *drv, int changed, int force)
+static void node_report_driver(struct node *n, char *drv, int changed, int force)
 {
 	struct driver *d;
 	int cnt;
@@ -90,7 +90,7 @@ void node_report_driver(struct node *n, char *drv, int changed, int force)
 	return;
 }
 
-void node_report_drivers(struct node *n)
+static void node_report_drivers(struct node *n)
 {
 	int cnt;
 	cJSON *obj;
@@ -243,7 +243,6 @@ void addDriver(struct node *n, char *driver, char *init, int uom)
  */
 void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
 {
-	struct command *c;
 	struct command *nc;
 	int cnt = 0;
 
@@ -270,7 +269,6 @@ void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *
  */
 void addSend(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
 {
-	struct send *c;
 	struct send *nc;
 	int cnt = 0;
 
@@ -448,7 +446,7 @@ struct node *getNodes(void)
 void *node_cmd_exec(void *args)
 {
 	cJSON *msg = (cJSON *)args;
-	cJSON *addr, *cmd, *value, *uom, *str;
+	cJSON *addr, *cmd, *value, *uom;
 	struct node *tmp;
 	int i;
 

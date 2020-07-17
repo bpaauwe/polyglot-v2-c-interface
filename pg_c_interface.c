@@ -61,10 +61,9 @@ char *getConfig(void)
  *     for caller.  Would need a key/value struct type.
  */
 
-static int _save_data(char *key, struct pair *params, int add)
+static int _save_data(const char *key, struct pair *params, int add)
 {
 	cJSON *cfg;
-	cJSON *item;
 	cJSON *c_params;
 	cJSON *obj;
 	int i;
@@ -102,7 +101,7 @@ static int _save_data(char *key, struct pair *params, int add)
 	return 0;
 }
 
-static char *_get_data(char *dtype, char *key)
+static char *_get_data(const char *dtype, char *key)
 {
 	cJSON *cfg;
 	cJSON *params;
@@ -126,7 +125,7 @@ static char *_get_data(char *dtype, char *key)
 	return value;
 }
 
-static int _remove_data(char *dtype, char *key)
+static int _remove_data(const char *dtype, char *key)
 {
 	cJSON *cfg;
 	cJSON *item;

@@ -35,7 +35,6 @@ void setCustomParamsDoc(void)
 {
 	FILE *fp;
 	char *buffer = NULL;
-	size_t len;
 	MMIOT *mkdown;
 	cJSON *msg;
 

@@ -14,8 +14,9 @@ enum LOGLEVELS {
 	DEBUG,
 };
 enum LOGLEVELS log_level;
-void logger(enum LOGLEVELS level, char *msg);
-void loggerf(enum LOGLEVELS level, char *fmt, ...);
+void initialize_logging(void);
+void logger(enum LOGLEVELS level, const char *msg);
+void loggerf(enum LOGLEVELS level, const char *fmt, ...);
 
 #define PARAMETER_CHANGED 0x01
 struct pair {
@@ -88,7 +89,8 @@ int removeCustomData(char *key);
 void freeCustomPairs(struct pair *params);
 struct node *allocNode(char *id, char *primary, char *address, char *name);
 void addDriver(struct node *n, char *driver, char *init, int uom);
-void addCommand(struct node *n, char *cmd_id, void (*callback)());
+void addCommand(struct node *n, char *cmd_id, void (*callback)(char *, char *, int));
+void addSend(struct node *n, char *cmd_id, void (*callback)(char *, char *, int));
 void addNode(struct node *n);
 void delNode(char *address);
 struct node *getNode(char * address);
@@ -99,6 +101,6 @@ void removeNotice(char *key);
 void removeNoticesAll(void);
 struct pair *getNotices(void);
 void setCustomParamsDoc(void);
-void updateProfile(void);
+void installProfile(void);
 void restart(void);
 

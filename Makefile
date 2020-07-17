@@ -20,7 +20,7 @@ SHARED_LDFLAGS = -Wl,-rpath,$(DEFAULT_LIB_INSTALL_PATH)
 PG_LDFLAGS = -L$(DEFAULT_LIB_INSTALL_PATH) -lpolyglot
 
 # Compiler and linker options
-CC = gcc
+CC = cc
 DEBUG_FLAGS = -g
 WARN_FLAGS_BSD = -fno-strict-aliasing -pipe  -Wsystem-headers -Wall -Wno-format-y2k \
 				 -W -Wno-unused-parameter -Wstrict-prototypes -Wmissing-prototypes \
@@ -28,7 +28,7 @@ WARN_FLAGS_BSD = -fno-strict-aliasing -pipe  -Wsystem-headers -Wall -Wno-format-
 				 -Wshadow -Wcast-align -Wunused-parameter -Wno-pointer-sign
 OPT_FLAGS = -O2
 LD_FLAGS = -lmosquitto -lssl -lcrypto -lcares -lpthread -lmarkdown
-CFLAGS = $(DEBUG_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS_BSD) 
+CFLAGS = $(DEBUG_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS_BSD) $(PICFLAGS) $(INCS)
 
 libpolyglotiface: $(PG_OBJS)
 	$(CC) $(DEBUG_FLAGS) $(OPT_FLAGS) $(WARN_FLAGS_BSD) $(SHARED_FLAGS) \

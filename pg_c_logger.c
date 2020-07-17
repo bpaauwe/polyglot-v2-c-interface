@@ -36,7 +36,7 @@ void initialize_logging(void)
 		fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
 }
 
-void logger(enum LOGLEVELS level, char *msg)
+void logger(enum LOGLEVELS level, const char *msg)
 {
 	if (log && (level <= log_level)) {
 		fprintf(log, "%s", msg);
@@ -48,7 +48,7 @@ void logger(enum LOGLEVELS level, char *msg)
 	}
 }
 
-void loggerf(enum LOGLEVELS level, char *fmt, ...)
+void loggerf(enum LOGLEVELS level, const char *fmt, ...)
 {
 	va_list args;
 
