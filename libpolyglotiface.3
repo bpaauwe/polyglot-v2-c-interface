@@ -14,6 +14,8 @@
 .Fn logger "enum LOGLEVELS level" "const char *msg"
 .Ft void
 .Fn loggerf "enum LOGLEVELS level" "const char *fmt" "..."
+.Ft void
+.Fn logger_set_level "enum LOGLEVELS new_level"
 .Ft int
 .Fn isConnected "void"
 .Ft char *
@@ -93,6 +95,10 @@ is like logger, but follows the printf conventions for formatting the output str
 The function
 .Fn isConnected
 returns true if an MQTT connection is active and false if the connection is not active.
+.Pp
+The function
+.Fn logger_set_level
+sets the level used to limit display of log messages.  The default level is INFO.
 .Pp
 The function
 .Fn getConfig

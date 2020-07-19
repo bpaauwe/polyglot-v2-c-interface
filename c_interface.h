@@ -48,6 +48,7 @@ enum LOGLEVELS log_level;
 void initialize_logging(void);
 void logger(enum LOGLEVELS level, const char *msg);
 void loggerf(enum LOGLEVELS level, const char *fmt, ...);
+void logger_set_level(enum LOGLEVELS new_level);
 
 #define PARAMETER_CHANGED 0x01
 struct pair {

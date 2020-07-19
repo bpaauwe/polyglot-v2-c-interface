@@ -47,10 +47,20 @@
 static FILE *log;
 static int debuglog = 1;
 
+/*
+ * Initialize the logging capability. 
+ *
+ * The log is currently written to a file called debug.log. 
+ * By default, the log level is initialized to INFO.
+ *
+ * TODO:
+ *    The log file should go in a directory logs. Need to 
+ *    make sure the directory exists first and if not create it.
+ *
+ *    A new log should get created at the start of each day (localtime)
+ */
 void initialize_logging(void)
 {
-	// TODO: check if log directory exist? if not, create it
-	// TODO: What about log rotation?
 	log_level = INFO;
 
 	log = fopen("debug.log", "a");
@@ -58,6 +68,11 @@ void initialize_logging(void)
 		fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
 }
 
+/*
+ * Output a simple log message to the log. The message is only
+ * output if the messages level is at or below the currently set
+ * log_level.
+ */
 void logger(enum LOGLEVELS level, const char *msg)
 {
 	if (log && (level <= log_level)) {
@@ -70,6 +85,11 @@ void logger(enum LOGLEVELS level, const char *msg)
 	}
 }
 
+/*
+ * Output a formatted log message to the log. The message is only
+ * output if the messages level is at or below the currently set
+ * log_level.
+ */
 void loggerf(enum LOGLEVELS level, const char *fmt, ...)
 {
 	va_list args;
@@ -88,4 +108,12 @@ void loggerf(enum LOGLEVELS level, const char *fmt, ...)
 		vfprintf(stderr, fmt, args);
 		va_end(args);
 	}
+}
+
+/*
+ * Change the log_level to a new level.
+ */
+void logger_set_level(enum LOGLEVELS new_level)
+{
+	log_level = new_level;
 }
