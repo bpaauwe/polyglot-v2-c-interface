@@ -1,0 +1,215 @@
+.Dd July 17, 2020
+.Dt Polyglot C interface library
+.Os
+.Sh NAME
+.Nm Intro
+.Nd Introduction to the Polyglot C interface library
+.Sh SYNOPSIS
+.In c_interface.h
+.Ft int
+.Fn init "void (*start)" "void (*shortPoll)" "void (*longPoll)" "void (*onConfig)"
+.Ft void
+.Fn initialize_logging "void"
+.Ft void
+.Fn logger "enum LOGLEVELS level" "const char *msg"
+.Ft void
+.Fn loggerf "enum LOGLEVELS level" "const char *fmt" "..."
+.Ft int
+.Fn isConnected "void"
+.Ft char *
+.Fn getConfig "void"
+.Ft struct pair *
+.Fn getCustomParams "void"
+.Ft char *
+.Fn getCustomParam "char *key"
+.Ft int
+.Fn saveCustomParams "struct pair *params"
+.Ft int
+.Fn addCustomParams "struct pair *params"
+.Ft int
+.Fn removeCustomParam "char *key"
+.Ft char *
+.Fn getCustomData "char *key"
+.Ft int
+.Fn saveCustomData "struct pair *params"
+.Ft int
+.Fn addCustomData "struct pair *params"
+.Ft int
+.Fn removeCustomData "char *key"
+.Ft void
+.Fn freeCustomPairs "struct pair *params"
+.Ft struct node *
+.Fn allocNode "char *id" "char *primary" "char *address" "char *name"
+.Ft void
+.Fn addDriver "struct node *n" "char *driver" "char *init" "int uom"
+.Ft void
+.Fn addCommand "struct node *n" "char *cmd_id" "void (*callback)(char *" "char *" "int)"
+.Ft void
+.Fn addSend "struct node *n" "char *cmd_id" "void (*callback)(char *" "char *" "int)"
+.Ft void
+.Fn addNode "struct node *n"
+.Ft void
+.Fn delNode "char *address"
+.Ft struct node *
+.Fn getNode "char * address"
+.Ft struct node *
+.Fn getNodes "void"
+.Ft void
+.Fn addNotice "char *key" "char *text"
+.Ft void
+.Fn removeNotice "char *key"
+.Ft void
+.Fn removeNoticesAll "void"
+.Ft struct pair *
+.Fn getNotices "void"
+.Ft void
+.Fn setCustomParamsDoc "void"
+.Ft void
+.Fn installProfile "void"
+.Ft void
+.Fn restart "void"
+.Sh DESCRIPTION
+The Polyglot C interface libarary provides a set of functions and structure to simplify the
+building of ISY node servers in 'C' or 'C++'.
+.Pp
+The function
+.Fn init 
+initializes the library, reads the configuration information from standard in, 
+initiates a MQTT connection with Polyglot and hooks up the applications functions for 
+.Fn start
+.Fn shortPoll
+.Fn longPoll
+.Fn onConfig
+.Pp
+The function
+.Fn logger
+is exposed to allow the application to output log information to the same log as the library. Typically, this
+will be to a log file.
+.Pp
+The function
+.Fn loggerf
+is like logger, but follows the printf conventions for formatting the output string.
+.Pp
+The function
+.Fn isConnected
+returns true if an MQTT connection is active and false if the connection is not active.
+.Pp
+The function
+.Fn getConfig
+Returns the current configuration stored for the node server. This includes the custom parameters, custom data, along with other node server information. The output is a JSON formatted string.
+.Pp
+The function
+.Fn getCustomParams
+Returns a list of key/value pairs representing the custom parameters stored for the node server. The pair structure is a linked list containing a character string for both the key and value.
+.Pp
+The function
+.Fn getCustomParam
+Returns the value of the specified key.  The value is a character string. The caller is responsible for freeing the string.
+.Pp
+The function
+.Fn saveCustomParams
+takes a linked list of key/value pairs and replaces any existing custom parameters with the new list.
+.Pp
+The function
+.Fn addCustomParams
+takes a linked list of key/value pairs and adds them to the exist list of custom parameters.
+.Pp
+The function
+.FN removeCustomParam
+Removes a single key/value pair from the list of custom parameters.
+.Pp
+The function
+.Fn getCustomData
+Returns a list of key/value pairs representing the custom data stored for the node server. The pair structure is a linked list containing a character string for both the key and value.
+.Pp
+The function
+.Fn SaveCustomData
+takes a linked list of key/value pairs and replaces any existing custom data with the new list.
+.Pp
+The function
+.Fn addCustomData
+takes a linked list of key/value pairs and adds them to the exist list of custom data.
+.Pp
+The function
+.Fn removeCustomData
+Removes a single key/value pair from the list of custom data.
+.Pp
+The function
+.Fn freeCustomPairs
+Frees the memory allocated for a custom parameter or custom data pair.
+.Pp
+The function
+.Fn allocNode
+Allocates a node structure and fills in the required information based on the parameters.  A pointer to the
+node structure is returned.  The caller is responsible for freeing this if it is not added to the internal node list.
+.Pp
+The function
+.Fn addDriver
+Adds a driver structure to the node's driver array.
+.Pp
+The function
+.Fn addCommand
+Adds a command structure to the node's command array.
+.Pp
+The function
+.Fn addSend
+Adds a command structure to the node's sends array.
+.Pp
+The function
+.Fn addNode
+Adds a node allocated with allocNode to the internal node list and sends the node information to Polyglot
+so that it can ask the ISY to add the node.  This is how new nodes get added to the ISY.
+.Pp
+The function
+.Fn delNode
+Deletes a node from the internal node list and requests that Polyglot delete the node from it's database. Polyglot will also ask the ISY to remove the node.
+.Pp
+The function
+.Fn getNode
+Get a pointer to the node that has the address specified in the parameter. 
+.Pp
+The function
+.Fn getNodes
+Get a pointer to the internal node list.  The node list is a linked list of nodes.  The caller can then walk
+the list to access each node.
+.Pp
+The function
+.Fn addNotice
+Send a message to Polyglot that will display on the node server's detail dashboard.  The "key" parameter is a
+unique identifier so that the notice can be removed later. This is useful to report events or messages to inform the user of missing configuration information.
+.Pp
+The function
+.Fn removeNotice
+Tell Polyglot to remove the message identified by "key".
+.Pp
+The function
+.Fn removeNoticesAll
+Tell Polyglot to remove all notices for this node server.
+.Pp
+The function
+.Fn getNotice
+Return the notice identified by "key".
+.Pp
+The function
+.Fn SetCustomParamsDoc
+Load the configuration help document into Polyglot's database for the node. The document must be
+named "POLYGLOT_CONFIG.md" and uses markup2 for formatting.  Once this document is in the Polyglot
+database, it can be displayed on the node server's dashboard to provide configuration instructions for
+the user. This is typically done during the initial node server/Polyglot communications and doesn't
+need to be called by the node server directly.  However, if the node server updates or changes the 
+document at runtime, this can be used to update Polyglot.
+.Pp
+The function
+.Fn installProfile
+Ask Polyglot to send the node server's profile files to the ISY.
+.Pp
+The function
+.Fn restart
+Ask Polyglot to restart this node server.
+.El
+.Sh FILES
+.It Pa /usr/local/lib/libpolyglotiface.a
+.El
+
+
+
