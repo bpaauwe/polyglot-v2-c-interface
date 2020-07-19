@@ -109,11 +109,11 @@ static int _save_data(const char *key, struct pair *params, int add)
 		i++;
 	}
 
-	loggerf(INFO, "New %s  = %s\n", key, cJSON_Print(c_params));
 
 	/* Send new c_params object to Polyglot */
 	obj = cJSON_CreateObject();
 	cJSON_AddItemToObject(obj, key, c_params);
+	loggerf(DEBUG, "Sending %s\n", cJSON_Print(obj));
 	poly_send(obj);
 	cJSON_Delete(obj);
 
@@ -177,7 +177,7 @@ static int _remove_data(const char *dtype, char *key)
 	/* Send updated object to Polyglot */
 	obj = cJSON_CreateObject();
 	cJSON_AddItemToObject(obj, dtype, update);
-	loggerf(INFO, "Updating %s = %s\n", dtype, cJSON_Print(obj));
+	loggerf(DEBUG, "Updating %s = %s\n", dtype, cJSON_Print(obj));
 	poly_send(obj);
 	cJSON_Delete(obj);
 	cJSON_Delete(update);
@@ -214,7 +214,6 @@ struct pair *getCustomParams(void)
 
 	// params is a list of objects, not an array, how do we iterate this?
 	if (cJSON_IsObject(params)) {
-		loggerf(INFO, "Found Params %s\n", cJSON_Print(params));
 		for (i = 0; i < cJSON_GetArraySize(params); i++) {
 			item = cJSON_GetArrayItem(params, i);
 			tmp = malloc(sizeof(struct pair));
@@ -223,10 +222,9 @@ struct pair *getCustomParams(void)
 			tmp->flags = 0;
 			tmp->next = p;
 			p = tmp;
-			loggerf(INFO, "Found customParam %s -> %s\n", item->string, item->valuestring);
 		}
 	} else {
-		logger(ERROR, "No customParams.\n");
+		logger(ERROR, "No customParams available.\n");
 	}
 
 	cJSON_Delete(cfg);

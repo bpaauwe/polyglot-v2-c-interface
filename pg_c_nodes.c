@@ -43,7 +43,6 @@ extern struct profile *poly;
 
 static void free_node(struct node *n)
 {
-	logger(INFO, "Starting node free process\n");
 	if (n->drivers)
 		free(n->drivers);
 	if (n->commands)
@@ -51,7 +50,7 @@ static void free_node(struct node *n)
 	if (n->sends)
 		free(n->sends);
 
-	logger(INFO, "Freeing node\n");
+	loggerf(DEBUG, "Freeing node %s\n", n->name);
 	free(n);
 
 	return;
@@ -63,7 +62,6 @@ static void node_set_driver(struct node *n, char *driver, char *value, int repor
 	int cnt;
 	int changed = 0;
 
-	logger(INFO, "TODO: node_set_driver implementation\n");
 	d = n->drivers;
 	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
 		if (strcmp(d->driver, driver) == 0) {
@@ -231,7 +229,7 @@ void addDriver(struct node *n, char *driver, char *init, int uom)
 
 	/* 1. Count how many drivers are in current node driver array */
 	cnt = n->driver_cnt;
-	loggerf(INFO, "node %s has %d drivers\n", n->name, n->driver_cnt);
+	loggerf(DEBUG, "node %s has %d drivers\n", n->name, n->driver_cnt);
 
 	/* 2. Allocate a new array sized to include new driver */
 	nd = calloc(cnt + 1, sizeof(struct driver));
@@ -251,7 +249,7 @@ void addDriver(struct node *n, char *driver, char *init, int uom)
 
 	d = n->drivers;
 	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
-		loggerf(INFO, "%s, %s, %d\n", d->driver, d->value, d->uom);
+		loggerf(DEBUG, "%s, %s, %d\n", d->driver, d->value, d->uom);
 		d++;
 	}
 
@@ -269,7 +267,7 @@ void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *
 	int cnt = 0;
 
 	cnt = n->command_cnt;
-	loggerf(INFO, "node %s has %d commands\n", n->name, n->command_cnt);
+	loggerf(DEBUG, "node %s has %d commands\n", n->name, n->command_cnt);
 
 	nc = calloc(cnt + 1, sizeof(struct command));
 	memcpy(nc, n->commands, (cnt * sizeof(struct command)));
@@ -295,7 +293,7 @@ void addSend(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *val
 	int cnt = 0;
 
 	cnt = n->send_cnt;
-	loggerf(INFO, "node %s has %d sends\n", n->name, n->send_cnt);
+	loggerf(DEBUG, "node %s has %d sends\n", n->name, n->send_cnt);
 
 	nc = calloc(cnt + 1, sizeof(struct send));
 	memcpy(nc, n->sends, (cnt * sizeof(struct send)));
@@ -385,37 +383,29 @@ void delNode(char *address)
 	addr = cJSON_CreateObject();
 	cJSON_AddStringToObject(addr, "address", address);
 	cJSON_AddItemToObject(obj, "removenode", addr);
-	logger(INFO, "calling polyglot to delete node\n");
+	loggerf(DEBUG, "Calling polyglot to delete node %s\n", address);
 	poly_send(obj);
 	cJSON_Delete(obj);
 
 
 	/* Delete node from internal node list */
-	logger(INFO, "Delete node from node list\n");
 	if (poly->nodelist) {
-		logger(INFO, "node list exists and not null\n");
 		tmp = poly->nodelist;
 		if (strcmp(tmp->address, address) == 0) {
-			logger(INFO, "first node is the one to delete\n");
 			poly->nodelist = tmp->next;
-			logger(INFO, "Calling free_node\n");
 			free_node(tmp);
 		} else {
-			logger(INFO, "walking list looking for node to delete\n");
 			prev = tmp;
 			tmp = tmp->next;
 			while (tmp) {
 				if (strcmp(tmp->address, address) == 0) {
 					prev->next = tmp->next;
-					logger(INFO, "found node, calling free_node\n");
 					free_node(tmp);
 				}
 				tmp = tmp->next;
 			}
-			logger(INFO, "Finished walking list\n");
 		}
 	}
-	logger(INFO, "Node deletion finished\n");
 	return;
 }
 
@@ -482,17 +472,16 @@ void *node_cmd_exec(void *args)
 		cJSON_AddStringToObject(msg, "uom", "0");
 	uom = cJSON_GetObjectItem(msg, "uom");
 
-	loggerf(INFO, ">>>> Process command %s\n", cJSON_Print(msg));
+	loggerf(DEBUG, "Process command %s\n", cJSON_Print(msg));
 
 	if (poly->nodelist) {
 		tmp = poly->nodelist;
 		while (tmp) {
 			if (strcmp(tmp->address, addr->valuestring) == 0) {
-				// Look up command in command list
-				loggerf(INFO, ">>>> Look up command %s\n", cmd->valuestring);
-				// call command callback with cmd->valuestring, value->valuestring, and
-				// uom->valuestring
-				loggerf(INFO, ">>>> command array: %d\n", tmp->command_cnt);
+				/*
+				 * call command callback with cmd->valuestring,
+				 * value->valuestring, and uom->valuestring
+				 */
 				for (i = 0; i < tmp->command_cnt; i++) {
 					if (strcmp(tmp->commands[i].id, cmd->valuestring) == 0) {
 						int iuom = 0;
@@ -500,7 +489,7 @@ void *node_cmd_exec(void *args)
 						if (uom->valuestring)
 							iuom = atoi(uom->valuestring);
 
-						loggerf(INFO, "callback(%s, %s, %d)\n",
+						loggerf(DEBUG, "callback(%s, %s, %d)\n",
 								cmd->valuestring,
 								value->valuestring,
 								iuom);

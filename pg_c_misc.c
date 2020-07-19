@@ -99,7 +99,7 @@ void installProfile(void)
 {
 	cJSON *msg, *body;
 
-	logger(INFO, "Sending Install Profile command to Polyglot.\n");
+	logger(DEBUG, "Sending Install Profile command to Polyglot.\n");
 	body = cJSON_CreateObject();
 	cJSON_AddBoolToObject(body, "reboot", 0); 
 	msg = cJSON_CreateObject();
@@ -119,7 +119,7 @@ void restart(void)
 {
 	cJSON *msg, *body;
 
-	logger(INFO, "Asking Polyglot to restart me..\n");
+	logger(DEBUG, "Asking Polyglot to restart me..\n");
 	body = cJSON_CreateObject();
 	msg = cJSON_CreateObject();
 	cJSON_AddItemToObject(msg, "restart", body);

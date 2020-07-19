@@ -57,7 +57,7 @@ void addNotice(char *key, char *notice)
 	cJSON_AddStringToObject(data, "value", notice);
 	msg = cJSON_CreateObject();
 	cJSON_AddItemToObject(msg, "addnotice", data);
-	loggerf(INFO, "Adding notice: %s\n", cJSON_Print(msg));
+	loggerf(DEBUG, "Adding notice: %s\n", cJSON_Print(msg));
 	poly_send(msg);
 
 	cJSON_Delete(msg);
@@ -103,11 +103,9 @@ void removeNoticesAll(void)
 	notices = cJSON_GetObjectItem(cfg, "notices");
 
 	if (notices) {
-		loggerf(INFO, "found existing notices: %s\n", cJSON_Print(notices));
 		// list of string objects
 		for (i = 0; i < cJSON_GetArraySize(notices); i++) {
 			item = cJSON_GetArrayItem(notices, i);
-			loggerf(INFO, "removeNotice(%s)\n", item->string);
 			removeNotice(item->string);
 		}
 	}

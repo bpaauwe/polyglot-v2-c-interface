@@ -74,7 +74,7 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	}
 
 	memset(poly, 0, sizeof(struct profile));
-	poly->num = profile;  // TODO: get this from stdin?
+	poly->num = profile; 
 	poly->config = NULL;
 	poly->connected = 0;
 	poly->custom_config_doc_sent = 0;
@@ -94,7 +94,7 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	}
 
 	/* Set callbacks */
-	logger(INFO, "Configure MQTT callbacks\n");
+	logger(DEBUG, "Configure MQTT callbacks\n");
 	mosquitto_connect_callback_set(mosq, on_connect);
 	mosquitto_message_callback_set(mosq, on_message);
 	mosquitto_disconnect_callback_set(mosq, on_disconnect);
@@ -121,11 +121,9 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 				"/var/polyglot/ssl/client_private.key",
 				NULL);
 	}
-	loggerf(INFO, "tls set returned %d\n", ret);
 	mosquitto_tls_opts_set(mosq, 0, NULL, NULL);
 
 	/* Make the connection */
-	/* TODO: Host and port should come from stdin */
 	loggerf(INFO, "Connect to Polyglot via MQTT %s:%d\n", host, port);
 	ret = mosquitto_connect_async(mosq, host, port, 0);
 	switch (ret) {
@@ -148,7 +146,6 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	ret = mosquitto_loop_start(mosq);
 	//ret = mosquitto_loop_forever(mosq, 1000, 1000);
 
-	logger(INFO, "finished with interface init\n");
 	return 0;
 }
 
@@ -170,7 +167,7 @@ void poly_send(cJSON *msg)
 
 	sprintf(topic, POLYGLOT_SELFCONNECTION, poly->num);
 	msg_str = cJSON_PrintUnformatted(msg);
-	loggerf(INFO, "Publishing '%s' to %s\n", msg_str, topic);
+	loggerf(DEBUG, "Publishing '%s' to %s\n", msg_str, topic);
 	ret = mosquitto_publish(mosq, NULL, topic, strlen(msg_str), msg_str, 0, 0);
 	if (ret)
 		logger(ERROR, "Failed to publish message to Polyglot\n");
@@ -178,8 +175,6 @@ void poly_send(cJSON *msg)
 
 /*
  * Once the connection is established, subscribe to the necessary topics
- *
- * TODO: Need to have the profile number pulled from ptr.
  */
 
 static void on_connect(struct mosquitto *m, void *ptr, int res)
@@ -190,23 +185,15 @@ static void on_connect(struct mosquitto *m, void *ptr, int res)
 	struct mqtt_priv *p = (struct mqtt_priv *)ptr;
 	(void)res;
 
-	loggerf(INFO, "Subscribing to node server profile %d\n", p->profile_num);
-
 	ret = mosquitto_subscribe(m, NULL, POLYGLOT_CONNECTION, 0);
-	loggerf(INFO, "subscribe returned %d\n", ret);
 
 	sprintf(topic, POLYGLOT_INPUT, p->profile_num);
 	mosquitto_subscribe(m, NULL, topic, 0);
 
-	//sprintf(topic, NODESERVER_TOPIC, p->num);
-	//mosquitto_subscribe(m, NULL, topic, 0);
-
 	/* publish a message to kick things off */
-	// { node: this.profile, connected: true }
 	sprintf(topic, POLYGLOT_SELFCONNECTION, p->profile_num);
 	sprintf(msg, "{\"node\": %d, \"connected\": true}", p->profile_num);
 	ret = mosquitto_publish(m, NULL, topic, strlen(msg), msg, 0, 0);
-	loggerf(INFO, "Published: %s\n", msg);
 
 	poly->connected = 1;
 }
@@ -235,28 +222,25 @@ static void on_message(struct mosquitto *m, void *ptr,
 		return;
 	}
 
-	loggerf(INFO, "-- got message @ %s: (%d, Qos %d, %s) '%s'\n",
+	loggerf(DEBUG, "-- got message @ %s: (%d, Qos %d, %s) '%s'\n",
 			msg->topic, msg->payloadlen, msg->qos, msg->retain ? "R" : "!r",
 			msg->payload);
 
-	// TODO: parse payload
 	jmsg = cJSON_Parse(msg->payload);
 	key = cJSON_GetObjectItemCaseSensitive(jmsg, "node");
-	loggerf(INFO, "In on_message(): node = %s\n", key->valuestring);
 	if (strcmp(key->valuestring, "polyglot") != 0) {
-		loggerf(INFO, "-- Not from polyglot, ignoring %s\n", key->valuestring);
+		/* ignore messsages not from polyglot */
 		return;
 	}
 
-	// What other objects can be in the message?
-	//   connected
-	//   config
-	//   shortPoll
-	//   longPoll
+	/*
+	 * Parse message and invoke handlers
+	 *
+	 * most of the handlers are executed in a thread so we don't block
+	 * here.
+	 */
 	if (cJSON_HasObjectItem(jmsg, "connected")) {
 		/* call start callback */
-		loggerf(INFO, "In on_message(): connected, calling start() callback\n");
-		
 		if (p->start) {
 			int ret;
 			ret = pthread_create(&thread, NULL, p->start, NULL);
@@ -264,35 +248,30 @@ static void on_message(struct mosquitto *m, void *ptr,
 	} else if (cJSON_HasObjectItem(jmsg, "config")) {
 		/* store config object and call onConfig */
 		key = cJSON_GetObjectItem(jmsg, "config");
-		loggerf(INFO, "config object = %s\n", cJSON_Print(key));
 
+		/* Call setCustomParamsDoc here */
 		setCustomParamsDoc();
 
-		// TODO: do we need to strdup this string?
-		// TODO: can we determine what has changed before saving it?
 		poly->config = cJSON_Print(key);
 		if (p->onConfig) {
 			pthread_create(&thread, NULL, p->onConfig, (void *)poly->config);
 		}
 	} else if (cJSON_HasObjectItem(jmsg, "shortPoll")) {
-		logger(INFO, "In on_message(): payload = shortPoll\n");
+		/* Call the node server's shortPoll callback */
 		if (p->shortPoll)
 			pthread_create(&thread, NULL, p->shortPoll, NULL);
 	} else if (cJSON_HasObjectItem(jmsg, "longPoll")) {
-		logger(INFO, "In on_message(): payload = longPoll\n");
+		/* Call the node server's longPoll callback */
 		if (p->longPoll)
 			pthread_create(&thread, NULL, p->longPoll, NULL);
 	} else if (cJSON_HasObjectItem(jmsg, "command")) {
-		// Looks like {"address":node_address, "cmd":command_id, "query": {}}
-		// How do we handle a command?
+		/* Execute the node command */
 		cJSON *cmd = cJSON_GetObjectItem(jmsg, "command");
 		pthread_create(&thread, NULL, node_cmd_exec, (void *)cmd);
 	} else {
-		// command, result, query, status, delete
-		logger(INFO, "Message type not yet handled\n");
+		// result, query, status, delete
+		logger(DEBUG, "Message type not yet handled\n");
 	}
-
-	logger(INFO, "on_message() finished.\n");
 }
 
 static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const int *granted)
@@ -303,7 +282,7 @@ static void on_subscribe(struct mosquitto *m, void *ptr, int mid, int qos, const
 	(void)qos;
 	(void)granted;
 
-	logger(INFO, "on_subscribe() called. Not used\n");
+	return;
 }
 
 static void on_publish(struct mosquitto *m, void *ptr, int res)
@@ -312,7 +291,7 @@ static void on_publish(struct mosquitto *m, void *ptr, int res)
 	(void)ptr;
 	(void)res;
 
-	logger(INFO, "on_publish() called. Not used\n");
+	return;
 }
 
 static int get_stdin_info(char **host, int *port, int *profile)
