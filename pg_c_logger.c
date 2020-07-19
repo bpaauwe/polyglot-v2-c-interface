@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <netdb.h>
@@ -46,6 +47,40 @@
 
 static FILE *log;
 static int debuglog = 1;
+static struct tm _logging_day;
+
+static void _rotate_log(void)
+{
+	struct tm *now;
+	time_t t;
+	char saved_name[128];
+
+	if (log == NULL)
+		return;
+
+	t = time(NULL);
+	now = localtime(&t);
+
+	/*
+	 * Check to see if the day has changed.  If so, we close
+	 * the existing log file, rename it, open a new log, and
+	 * finally, update _logging_day
+	 */
+	if (now->tm_mday != _logging_day.tm_mday) {
+		sprintf(saved_name, "logs/debug.log.%04d-%02d.%02d",
+				_logging_day.tm_year + 1900,
+				_logging_day.tm_mon + 1,
+				_logging_day.tm_mday);
+		fclose(log);
+		rename("logs/debug.log", saved_name);
+		log = fopen("logs/debug.log", "a");
+		if (log == NULL)
+			fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
+
+		memcpy(&_logging_day, now, sizeof(struct tm));
+	}
+}
+
 
 /*
  * Initialize the logging capability. 
@@ -54,16 +89,36 @@ static int debuglog = 1;
  * By default, the log level is initialized to INFO.
  *
  * TODO:
- *    The log file should go in a directory logs. Need to 
- *    make sure the directory exists first and if not create it.
- *
  *    A new log should get created at the start of each day (localtime)
+ *
+ *    Add timestamping to log entries?
  */
 void initialize_logging(void)
 {
+	struct stat logs;
+	time_t t;
+
 	log_level = INFO;
 
-	log = fopen("debug.log", "a");
+	/* Check for existance of "logs" subdirectory */
+	if (stat("logs", &logs) != 0) {
+		/* it doesn't exist, Create it */
+		if (mkdir("logs", 0755) != 0) {
+			fprintf(stderr, "Can't create logs directory.");
+			log = NULL;
+			return;
+		}
+	} else if (!S_ISDIR(logs.st_mode)) {
+		/* it exists but is not a directory */
+		fprintf(stderr, "Can't create logs directory.");
+		log = NULL;
+		return;
+	}
+
+	t = time(NULL);
+	localtime_r(&t, &_logging_day);
+
+	log = fopen("logs/debug.log", "a");
 	if (log == NULL)
 		fprintf(stderr, "Failed to open log file: debug.log (%d)\n", errno);
 }
@@ -76,6 +131,7 @@ void initialize_logging(void)
 void logger(enum LOGLEVELS level, const char *msg)
 {
 	if (log && (level <= log_level)) {
+		_rotate_log();
 		fprintf(log, "%s", msg);
 		fflush(log);
 		if (debuglog)
@@ -96,6 +152,7 @@ void loggerf(enum LOGLEVELS level, const char *fmt, ...)
 
 	va_start(args, fmt);
 	if (log && (level <= log_level)) {
+		_rotate_log();
 		vfprintf(log, fmt, args);
 		fflush(log);
 	} else {
