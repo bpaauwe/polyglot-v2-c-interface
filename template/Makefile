@@ -5,7 +5,7 @@ CFLAGS=$(INCS)
 
 CC = cc
 
-ns_template: ns_template.c ../c_interface.h
+ns_template: ns_template.c ../c_interface.h ../libpolyglotiface.so.1
 	cc -g -o ns_template $(INCS) $(LIBS) ns_template.c
 
 
