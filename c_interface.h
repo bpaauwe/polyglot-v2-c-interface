@@ -116,6 +116,7 @@ struct iface_ops {
 	void *(*shortPoll)(void *args);
 	void *(*longPoll)(void *args);
 	void *(*onConfig)(void *args);
+	void *(*delete)(void *args);
 };
 
 int init(struct iface_ops *ns_ops);

@@ -273,8 +273,11 @@ static void on_message(struct mosquitto *m, void *ptr,
 		cJSON *query = cJSON_GetObjectItem(jmsg, "status");
 		cJSON *addr = cJSON_GetObjectItem(query, "address");
 		pthread_create(&thread, NULL, node_status_exec, (void *)addr->valuestring);
+	} else if (cJSON_HasObjectItem(jmsg, "delete")) {
+		if (p->ns_ops->delete)
+			p->ns_ops->delete(NULL); /* should we run this in a thread? */
 	} else {
-		// result, delete
+		// result
 		logger(DEBUG, "Message type not yet handled\n");
 	}
 }
