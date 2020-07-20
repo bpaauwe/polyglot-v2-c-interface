@@ -111,7 +111,14 @@ struct node {
 	struct node *next;
 };
 
-int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig));
+struct iface_ops {
+	void *(*start)(void *args);
+	void *(*shortPoll)(void *args);
+	void *(*longPoll)(void *args);
+	void *(*onConfig)(void *args);
+};
+
+int init(struct iface_ops *ns_ops);
 int isConnected(void);
 char *getConfig(void);
 struct pair *getCustomParams(void);

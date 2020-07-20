@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .In c_interface.h
 .Ft int
-.Fn init "void (*start)" "void (*shortPoll)" "void (*longPoll)" "void (*onConfig)"
+.Fn init "struct iface_ops *node_server_ops:
 .Ft void
 .Fn initialize_logging "void"
 .Ft void

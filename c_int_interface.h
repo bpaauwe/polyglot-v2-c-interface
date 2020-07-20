@@ -36,6 +36,7 @@ extern "C"
 
 struct mqtt_priv {
 	int profile_num;
+	struct iface_ops *ns_ops;
 	void *(*start)(void *args);
 	void *(*longPoll)(void *args);
 	void *(*shortPoll)(void *args);

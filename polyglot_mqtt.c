@@ -54,7 +54,7 @@ extern void initialize_logging(void);
 /*
  * Initialize the link to Polyglot
  */
-int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
+int init(struct iface_ops *ns_ops)
 {
 	int ret;
 	char *host;
@@ -74,15 +74,12 @@ int init(void (*start), void (*shortPoll), void (*longPoll), void (*onConfig))
 	}
 
 	memset(poly, 0, sizeof(struct profile));
-	poly->num = profile; 
+	poly->num = profile;
 	poly->config = NULL;
 	poly->connected = 0;
 	poly->custom_config_doc_sent = 0;
 	poly->mqtt_info.profile_num = profile;
-	poly->mqtt_info.start = start;
-	poly->mqtt_info.longPoll = longPoll;
-	poly->mqtt_info.shortPoll = shortPoll;
-	poly->mqtt_info.onConfig = onConfig;
+	poly->mqtt_info.ns_ops = ns_ops;
 	poly->nodelist = NULL;
 
 	/* Create runtime instance with random client ID */
@@ -241,9 +238,9 @@ static void on_message(struct mosquitto *m, void *ptr,
 	 */
 	if (cJSON_HasObjectItem(jmsg, "connected")) {
 		/* call start callback */
-		if (p->start) {
+		if (p->ns_ops->start) {
 			int ret;
-			ret = pthread_create(&thread, NULL, p->start, NULL);
+			ret = pthread_create(&thread, NULL, p->ns_ops->start, NULL);
 		}
 	} else if (cJSON_HasObjectItem(jmsg, "config")) {
 		/* store config object and call onConfig */
@@ -253,17 +250,17 @@ static void on_message(struct mosquitto *m, void *ptr,
 		setCustomParamsDoc();
 
 		poly->config = cJSON_Print(key);
-		if (p->onConfig) {
-			pthread_create(&thread, NULL, p->onConfig, (void *)poly->config);
+		if (p->ns_ops->onConfig) {
+			pthread_create(&thread, NULL, p->ns_ops->onConfig, (void *)poly->config);
 		}
 	} else if (cJSON_HasObjectItem(jmsg, "shortPoll")) {
 		/* Call the node server's shortPoll callback */
-		if (p->shortPoll)
-			pthread_create(&thread, NULL, p->shortPoll, NULL);
+		if (p->ns_ops->shortPoll)
+			pthread_create(&thread, NULL, p->ns_ops->shortPoll, NULL);
 	} else if (cJSON_HasObjectItem(jmsg, "longPoll")) {
 		/* Call the node server's longPoll callback */
-		if (p->longPoll)
-			pthread_create(&thread, NULL, p->longPoll, NULL);
+		if (p->ns_ops->longPoll)
+			pthread_create(&thread, NULL, p->ns_ops->longPoll, NULL);
 	} else if (cJSON_HasObjectItem(jmsg, "command")) {
 		/* Execute the node command */
 		cJSON *cmd = cJSON_GetObjectItem(jmsg, "command");
@@ -277,7 +274,7 @@ static void on_message(struct mosquitto *m, void *ptr,
 		cJSON *addr = cJSON_GetObjectItem(query, "address");
 		pthread_create(&thread, NULL, node_status_exec, (void *)addr->valuestring);
 	} else {
-		// result, query, status, delete
+		// result, delete
 		logger(DEBUG, "Message type not yet handled\n");
 	}
 }
