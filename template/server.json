@@ -1,0 +1,23 @@
+{
+    "name": "CTemplate",
+    "docs": "https://github.com/bpaauwe/udi-poly-template-c",
+    "type": "",
+    "executable": "template-poly",
+    "install": "install.sh",
+    "description": "Template Node Server",
+    "notice": "Your disclaimer here",
+    "shortPoll": "120",
+    "longPoll": "240",
+    "testMode": false,
+    "profile_version": "1.0.0",
+    "credits": [
+        {
+            "title": "mypoly: a NodeServer for Template Integration",
+            "author": "Robert Paauwe",
+            "version": "1.0.0",
+            "date": "July 19, 2020",
+            "source": "https://github.com/bpaauwe/udi-poly-template-c",
+            "license": "https://raw.githubusercontent.com/bpaauwe/udi-poly-template-c/master/LICENSE"
+        }
+    ]
+}
