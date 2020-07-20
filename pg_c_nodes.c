@@ -164,11 +164,21 @@ static void node_report_cmd(struct node *n, char *sends, char *value, int uom)
 	return;
 }
 
+static void node_query(struct node *n)
+{
+	node_report_drivers(n);
+}
+
 static const struct node_ops node_functions = {
 	.setDriver = node_set_driver,
 	.reportDriver = node_report_driver,
 	.reportDrivers = node_report_drivers,
 	.reportCmd = node_report_cmd,
+	.query = node_query,
+	.start = NULL,
+	.shortPoll = NULL,
+	.longPoll = NULL,
+	.status = NULL,
 };
 
 
@@ -500,6 +510,44 @@ void *node_cmd_exec(void *args)
 				return NULL;
 			}
 			tmp = tmp->next;
+		}
+	}
+
+	return NULL;
+}
+
+void *node_query_exec(void *args)
+{
+	char *addr = (char *)args;
+	struct node *tmp;
+
+	if (poly->nodelist) {
+		tmp = poly->nodelist;
+		while (tmp) {
+			if (strcmp(addr, "all") == 0 ||
+					strcmp(addr, tmp->address) == 0) {
+				if (tmp->ops.reportDrivers != NULL)
+					tmp->ops.reportDrivers(tmp);
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void *node_status_exec(void *args)
+{
+	char *addr = (char *)args;
+	struct node *tmp;
+
+	if (poly->nodelist) {
+		tmp = poly->nodelist;
+		while (tmp) {
+			if (strcmp(addr, "all") == 0 ||
+					strcmp(addr, tmp->address) == 0) {
+				if (tmp->ops.reportDrivers != NULL)
+					tmp->ops.reportDrivers(tmp);
+			}
 		}
 	}
 

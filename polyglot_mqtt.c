@@ -268,6 +268,14 @@ static void on_message(struct mosquitto *m, void *ptr,
 		/* Execute the node command */
 		cJSON *cmd = cJSON_GetObjectItem(jmsg, "command");
 		pthread_create(&thread, NULL, node_cmd_exec, (void *)cmd);
+	} else if (cJSON_HasObjectItem(jmsg, "query")) {
+		cJSON *query = cJSON_GetObjectItem(jmsg, "query");
+		cJSON *addr = cJSON_GetObjectItem(query, "address");
+		pthread_create(&thread, NULL, node_query_exec, (void *)addr->valuestring);
+	} else if (cJSON_HasObjectItem(jmsg, "status")) {
+		cJSON *query = cJSON_GetObjectItem(jmsg, "status");
+		cJSON *addr = cJSON_GetObjectItem(query, "address");
+		pthread_create(&thread, NULL, node_status_exec, (void *)addr->valuestring);
 	} else {
 		// result, query, status, delete
 		logger(DEBUG, "Message type not yet handled\n");
