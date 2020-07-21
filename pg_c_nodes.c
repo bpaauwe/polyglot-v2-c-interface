@@ -334,6 +334,7 @@ void addNode(struct node *n)
 	cJSON *drv;
 	cJSON *drv_array;
 	cJSON *node_array;
+	cJSON *hint_array;
 	cJSON *node_array_obj;
 	int cnt;
 
@@ -355,7 +356,9 @@ void addNode(struct node *n)
 	cJSON_AddStringToObject(node, "name", n->name);
 	cJSON_AddStringToObject(node, "node_def_id", n->id);
 	cJSON_AddStringToObject(node, "primary", n->primary);
-	cJSON_AddNumberToObject(node, "hint", n->hint);
+	hint_array = cJSON_AddArrayToObject(node, "hint");
+	for (cnt = 0; cnt < 3; cnt++)
+		cJSON_AddItemToArray(hint_array, cJSON_CreateNumber((double)n->hint[cnt]));
 	drv_array = cJSON_AddArrayToObject(node, "drivers");
 	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
 		drv = cJSON_CreateObject();

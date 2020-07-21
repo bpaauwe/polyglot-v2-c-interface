@@ -107,7 +107,7 @@ struct node {
 	int command_cnt;
 	struct send *sends;
 	int send_cnt;
-	unsigned int hint;
+	unsigned char hint[4];
 	struct node_ops ops;
 	struct node *next;
 };
