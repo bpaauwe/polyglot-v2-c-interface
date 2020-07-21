@@ -79,6 +79,7 @@ struct send {
 
 struct node_ops {
 	void (*setDriver)(struct node *n, char *driver, char *value, int report, int force, int uom);
+	char *(*getDriver)(struct node *n, char *driver);
 	void (*reportDriver)(struct node *n, char *driver, int changed, int force);
 	void (*reportDrivers)(struct node *n);
 	void (*reportCmd)(struct node *n, char *send, char *value, int uom);

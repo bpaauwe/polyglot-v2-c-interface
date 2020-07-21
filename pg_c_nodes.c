@@ -78,6 +78,22 @@ static void node_set_driver(struct node *n, char *driver, char *value, int repor
 	return;
 }
 
+static char *node_get_driver(struct node *n, char *driver)
+{
+	struct driver *d;
+	int cnt;
+
+	d = n->drivers;
+	for (cnt = 0; cnt < n->driver_cnt; cnt++) {
+		if (strcmp(d->driver, driver) == 0) {
+			return d->value;
+		}
+		d++;
+	}
+	return "";
+}
+
+
 static void node_report_driver(struct node *n, char *drv, int changed, int force)
 {
 	struct driver *d;
@@ -171,6 +187,7 @@ static void node_query(struct node *n)
 
 static const struct node_ops node_functions = {
 	.setDriver = node_set_driver,
+	.getDriver = node_get_driver,
 	.reportDriver = node_report_driver,
 	.reportDrivers = node_report_drivers,
 	.reportCmd = node_report_cmd,
