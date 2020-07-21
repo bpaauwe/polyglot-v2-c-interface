@@ -1,11 +1,11 @@
 #include <c_interface.c>
 
-static void update_profile(char *id, char *value, int uom);
-static void cmd_set_debug_mode(char *id, char *value, int uom);
-static void remove_notices_all(char *id, char *value, int uom);
-static void remove_notice_test(char *id, char *value, int uom);
-static void cmd_query(char *id, char *value, int uom);
-static void cmd_discover(char *id, char *value, int uom);
+static void update_profile(struct node *n, char *id, char *value, int uom);
+static void cmd_set_debug_mode(struct node *n, char *id, char *value, int uom);
+static void remove_notices_all(struct node *n, char *id, char *value, int uom);
+static void remove_notice_test(struct node *n, char *id, char *value, int uom);
+static void cmd_query(struct node *n, char *id, char *value, int uom);
+static void cmd_discover(struct node *n, char *id, char *value, int uom);
 
 /*
  * The Controller interface defines the primary node from the ISY prespective.
@@ -50,10 +50,9 @@ static void *start(void *args)
 	addCommand(controller, "REMOVE_NOTICE_TEST", remove_notice_test);
 	addCommand(controller, "SET_DM", cmd_set_debug_mode);
 	addNode(controller);
-	freeNode(controller);
 
 	check_params();
-	discover();
+	discover(controller->address);
 }
 
 static void *long_poll(void)
@@ -141,7 +140,7 @@ struct iface_ops controller_ops {
  */
 static void discover(void)
 {
-	self.addNode(TemplateNode(self, self.address, 'templateaddr', 'Template Node Name'))
+	addNode(TemplateNode(self.address, 'templateaddr', 'Template Node Name'))
 }
 
 
@@ -193,37 +192,37 @@ static void check_params(void)
 		addNotice("test", "Please set proper user and password in configuration page and restart this node server.");
 }
 
-static void update_profile(char *id, char *value, int uom)
+static void update_profile(struct node *self, char *id, char *value, int uom)
 {
 	logger(INFO, "Update Profile\n");
 	installProfile();
 }
 
-static void remove_notices_all(char *id, char *value, int uom)
+static void remove_notices_all(struct node *self, char *id, char *value, int uom)
 {
 	logger(INFO, "remove all notices\n");
 	removeNoticesAll();
 }
 
-static void remove_notice_test(char *id, char *value, int uom)
+static void remove_notice_test(struct node *self, char *id, char *value, int uom)
 {
 	logger(INFO, "remove only test notice\n");
 	removeNotice("test");
 }
 
-static void cmd_query(char *id, char *value, int uom)
+static void cmd_query(struct node *self, char *id, char *value, int uom)
 {
 	logger(INFO, "Query command\n");
 	query();
 }
 
-static void cmd_discover(char *id, char *value, int uom)
+static void cmd_discover(struct node *self, char *id, char *value, int uom)
 {
 	logger(INFO, "Discover command\n");
-	discover();
+	discover(self->address);
 }
 
-static void cmd_set_debug_mode(char *id, char *value, int uom)
+static void cmd_set_debug_mode(struct node *self, char *id, char *value, int uom)
 {
 	loogerf(DEBUG, "cmd_set_debug_mode: %s\n", value);
 
