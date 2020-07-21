@@ -271,7 +271,8 @@ void addDriver(struct node *n, char *driver, char *init, int uom)
  *
  * add a command to the node's command list.
  */
-void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
+void addCommand(struct node *n, char *cmd_id,
+		void (*callback)(struct node *n, char *cmd, char *value, int uom))
 {
 	struct command *nc;
 	int cnt = 0;
@@ -297,7 +298,8 @@ void addCommand(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *
  *
  * add a command that gets sent to the node's sent list.
  */
-void addSend(struct node *n, char *cmd_id, void (*callback)(char *cmd, char *value, int uom))
+void addSend(struct node *n, char *cmd_id,
+		void (*callback)(struct node *n, char *cmd, char *value, int uom))
 {
 	struct send *nc;
 	int cnt = 0;
@@ -487,6 +489,7 @@ void *node_cmd_exec(void *args)
 	if (poly->nodelist) {
 		tmp = poly->nodelist;
 		while (tmp) {
+			/* look up the node with this address */
 			if (strcmp(tmp->address, addr->valuestring) == 0) {
 				/*
 				 * call command callback with cmd->valuestring,
@@ -503,7 +506,7 @@ void *node_cmd_exec(void *args)
 								cmd->valuestring,
 								value->valuestring,
 								iuom);
-						tmp->commands[i].callback(cmd->valuestring,
+						tmp->commands[i].callback(tmp, cmd->valuestring,
 								value->valuestring, iuom);
 					}
 				}

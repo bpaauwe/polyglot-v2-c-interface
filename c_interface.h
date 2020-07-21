@@ -37,6 +37,8 @@ extern "C"
 {
 #endif
 
+struct node;
+
 enum LOGLEVELS {
 	CRITICAL,
 	ERROR,
@@ -66,15 +68,14 @@ struct driver {
 
 struct command {
 	char *id;
-	void (*callback)(char *cmd, char *value, int uom);
+	void (*callback)(struct node *n, char *cmd, char *value, int uom);
 };
 
 struct send {
 	char *id;
-	void (*callback)(char *cmd, char *value, int uom);
+	void (*callback)(struct node *n, char *cmd, char *value, int uom);
 };
 
-struct node;
 
 struct node_ops {
 	void (*setDriver)(struct node *n, char *driver, char *value, int report, int force, int uom);
@@ -134,8 +135,8 @@ int removeCustomData(char *key);
 void freeCustomPairs(struct pair *params);
 struct node *allocNode(char *id, char *primary, char *address, char *name);
 void addDriver(struct node *n, char *driver, char *init, int uom);
-void addCommand(struct node *n, char *cmd_id, void (*callback)(char *, char *, int));
-void addSend(struct node *n, char *cmd_id, void (*callback)(char *, char *, int));
+void addCommand(struct node *n, char *cmd_id, void (*callback)(struct node *, char *, char *, int));
+void addSend(struct node *n, char *cmd_id, void (*callback)(struct node *, char *, char *, int));
 void addNode(struct node *n);
 void delNode(char *address);
 struct node *getNode(char * address);
