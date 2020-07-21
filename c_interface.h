@@ -141,6 +141,8 @@ void addNode(struct node *n);
 void delNode(char *address);
 struct node *getNode(char * address);
 struct node *getNodes(void);
+void setNodeHint(struct node *n, unsigned char one, unsigned char two,
+		unsigned char three, unsigned char four);
 void addNotice(char *key, char *text);
 void addNoticeTemp(char *key, char *text);
 void removeNotice(char *key);

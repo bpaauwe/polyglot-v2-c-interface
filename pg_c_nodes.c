@@ -464,6 +464,22 @@ struct node *getNodes(void)
 }
 
 /*
+ * setNodeHint
+ *
+ * Set the node's hint.  A hint is 4 bytes.
+ */
+void setNodeHint(struct node *n, unsigned char one,
+		unsigned char two, unsigned char three, unsigned char four)
+{
+	n->hint[0] = one;
+	n->hint[1] = two;
+	n->hint[2] = three;
+	n->hint[3] = four;
+
+	return;
+}
+
+/*
  * node_cmd_exec
  *
  * An internal function that executes a node command by

@@ -57,6 +57,8 @@
 .Ft struct node *
 .Fn getNodes "void"
 .Ft void
+.Fn setNodeHint "struct node *n" "unsigned char" "unsigned char" "unsigned char" "unsigned char"
+.Ft void
 .Fn addNotice "char *key" "char *text"
 .Ft void
 .Fn removeNotice "char *key"
@@ -178,6 +180,11 @@ The function
 .Fn getNodes
 Get a pointer to the internal node list.  The node list is a linked list of nodes.  The caller can then walk
 the list to access each node.
+.Pp
+The function
+.Fn setNodeHint
+Set the node's hint values.  The hint can be used by external software to determine
+what type of node this is.
 .Pp
 The function
 .Fn addNotice
