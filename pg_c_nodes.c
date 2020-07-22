@@ -497,6 +497,42 @@ void setNodeHint(struct node *n, unsigned char one,
 }
 
 /*
+ * Node operation function table entries.
+ *
+ * These helper functions can be used to replace the existing 
+ * functions in the node's function table.
+ */
+void setNodeStart(struct node *n, void (*funct)(struct node *n))
+{
+	n->ops.start = funct;
+	return;
+}
+
+void setNodeLongPoll(struct node *n, void (*funct)(struct node *n))
+{
+	n->ops.longPoll = funct;
+	return;
+}
+
+void setNodeShortPoll(struct node *n, void (*funct)(struct node *n))
+{
+	n->ops.shortPoll = funct;
+	return;
+}
+
+void setNodeQuery(struct node *n, void (*funct)(struct node *n))
+{
+	n->ops.query = funct;
+	return;
+}
+
+void setNodeStatus(struct node *n, void (*funct)(struct node *n))
+{
+	n->ops.start = funct;
+	return;
+}
+
+/*
  * node_cmd_exec
  *
  * An internal function that executes a node command by

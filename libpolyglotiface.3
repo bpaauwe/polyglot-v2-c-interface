@@ -59,6 +59,16 @@
 .Ft void
 .Fn setNodeHint "struct node *n" "unsigned char" "unsigned char" "unsigned char" "unsigned char"
 .Ft void
+.Fn setNodeStart "struct node *n" "void (*func)(struct node *n)"
+.Ft void
+.Fn setNodeShortPoll "struct node *n" "void (*func)(struct node *n)"
+.Ft void
+.Fn setNodeLongPoll "struct node *n" "void (*func)(struct node *n)"
+.Ft void
+.Fn setNodeQuery "struct node *n" "void (*func)(struct node *n)"
+.Ft void
+.Fn setNodeStatus "struct node *n" "void (*func)(struct node *n)"
+.Ft void
 .Fn addNotice "char *key" "char *text"
 .Ft void
 .Fn removeNotice "char *key"
@@ -185,6 +195,31 @@ The function
 .Fn setNodeHint
 Set the node's hint values.  The hint can be used by external software to determine
 what type of node this is.
+.Pp
+.Fn setNodeStart
+Replace the node function 
+.Fn start
+with a node server specific start function.
+.Pp
+.Fn setNodeShortPoll
+Replace the node function 
+.Fn shortPoll
+with a node server specific short poll function.
+.Pp
+.Fn setNodeLongPoll
+Replace the node function 
+.Fn longPoll
+with a node server specific long poll function.
+.Pp
+.Fn setNodeQuery
+Replace the node function 
+.Fn query
+with a node server specific query function.
+.Pp
+.Fn setNodeStatus
+Replace the node function 
+.Fn status
+with a node server specific status function.
 .Pp
 The function
 .Fn addNotice

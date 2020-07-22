@@ -152,6 +152,11 @@ struct pair *getNotices(void);
 void setCustomParamsDoc(void);
 void installProfile(void);
 void restart(void);
+void setNodeStart(struct node *n, void (*funct)(struct node *n));
+void setNodeShortPoll(struct node *n, void (*funct)(struct node *n));
+void setNodeLongPoll(struct node *n, void (*funct)(struct node *n));
+void setNodeQuery(struct node *n, void (*funct)(struct node *n));
+void setNodeStatus(struct node *n, void (*funct)(struct node *n));
 
 #ifdef __cplusplus
 }
