@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <c_interface.h>
 
 /*
@@ -20,15 +22,15 @@ static void *start(void *args)
 {
 	struct node *self = (struct node *)args;
 
-	loggerf(DEBUG("%s: get ST=%s\n", self->name, self->getDriver("ST"));
-	self->setDriver('ST', 1)
-	loggerf(DEBUG("%s: get ST=%s\n", self->name, self->getDriver("ST"));
-	self->setDriver('ST', 0)
-	loggerf(DEBUG("%s: get ST=%s\n", self->name, self->getDriver("ST"));
-	self->setDriver('ST', 1)
-	loggerf(DEBUG("%s: get ST=%s\n", self->name, self->getDriver("ST"));
-	self->setDriver('ST', 0)
-	loggerf(DEBUG("%s: get ST=%s\n", self->name, self->getDriver("ST"));
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
+	self->ops.setDriver(self, "ST", "1", 1, 1, 2);
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
+	self->ops.setDriver(self, "ST", "0", 1, 1, 2);
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
+	self->ops.setDriver(self, "ST", "1", 1, 1, 2);
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
+	self->ops.setDriver(self, "ST", "0", 1, 1, 2);
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
 
 	return NULL;
 }
@@ -41,12 +43,14 @@ static void *short_poll(void *args)
 
 	logger(DEBUG, "shortPoll\n");
 
-	if (atoi(self->getDriver("ST")) == 1)
-		self->setDriver("ST", "0");
+	if (atoi(self->ops.getDriver(self, "ST")) == 1)
+		self->ops.setDriver(self, "ST", "0", 1, 1, 2);
 	else
-		self->setDriver("ST", "1");
+		self->ops.setDriver(self, "ST", "1", 1, 1, 2);
 
-	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->getDriver("ST";))
+	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
+
+	return NULL;
 }
 
 static void *long_poll(void *args)
@@ -54,6 +58,8 @@ static void *long_poll(void *args)
 	struct node *self = (struct node *)args;
 
 	logger(DEBUG, "longPoll\n");
+
+	return NULL;
 }
 
 /*
@@ -65,7 +71,9 @@ static void *query(void *args)
 {
 	struct node *self = (struct node *)args;
 
-	self->node_ops.reportDrivers(self);
+	self->ops.reportDrivers(self);
+
+	return NULL;
 }
 
 /*
@@ -75,7 +83,7 @@ static void *query(void *args)
  */
 static void cmd_on(struct node *self, char *id, char *value, int uom)
 {
-	self->node_ops.setDriver("ST", "1");
+	self->ops.setDriver(self, "ST", "1", 1, 1, 2);
 }
 
 /*
@@ -85,7 +93,7 @@ static void cmd_on(struct node *self, char *id, char *value, int uom)
  */
 static void cmd_off(struct node *self, char *id, char *value, int uom)
 {
-	self->node_ops.setDriver("ST", "0");
+	self->ops.setDriver(self, "ST", "0", 1, 1, 2);
 }
 
 /*
@@ -93,7 +101,7 @@ static void cmd_off(struct node *self, char *id, char *value, int uom)
  */
 static void cmd_ping(struct node *self, char *id, char *value, int uom)
 {
-	logger(DEBUG, "cmd_ping: Enter: id = %s value = %s\n", id, value);
+	loggerf(DEBUG, "cmd_ping: Enter: id = %s value = %s\n", id, value);
 }
 
 
@@ -114,15 +122,15 @@ struct node *TemplateNode(char *address, char *parent, char *name)
 	 * of variable to display. Check the UOM's in the WSDK for a complete list.
 	 * UOM 2 is boolean so the ISY will display 'True/False'
 	 */
-	addDriver(controller, "ST", "1", 2);
+	addDriver(n, "ST", "1", 2);
 
 	/*
 	 * Create an array of commands. If ISY sends a command to the NodeServer,
 	 * this tells it which method to call. DON calls setOn, etc.
 	 */
-	addCommand(controller, "DON", cmd_on);
-	addCommand(controller, "DOF", cmd_off);
-	addCommand(controller, "PING", cmd_ping);
+	addCommand(n, "DON", cmd_on);
+	addCommand(n, "DOF", cmd_off);
+	addCommand(n, "PING", cmd_ping);
 
 	/*
 	 * When a node is allocation it has a default set of node operations

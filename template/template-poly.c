@@ -1,4 +1,5 @@
-
+#include <stdio.h>
+#include <unistd.h>
 /*
  * This is a NodeServer template for Polyglot v2 written in 'C'
  * by Robert Paauwe (bpaauwe@yahoo.com)

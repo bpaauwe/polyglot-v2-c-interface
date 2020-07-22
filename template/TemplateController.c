@@ -1,4 +1,9 @@
-#include <c_interface.c>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <c_interface.h>
+
+extern struct node *TemplateNode(char *parent, char *addr, char *name);
 
 static void update_profile(struct node *n, char *id, char *value, int uom);
 static void cmd_set_debug_mode(struct node *n, char *id, char *value, int uom);
@@ -6,6 +11,9 @@ static void remove_notices_all(struct node *n, char *id, char *value, int uom);
 static void remove_notice_test(struct node *n, char *id, char *value, int uom);
 static void cmd_query(struct node *n, char *id, char *value, int uom);
 static void cmd_discover(struct node *n, char *id, char *value, int uom);
+static void discover(char *address);
+static void check_params(void);
+
 
 /*
  * The Controller interface defines the primary node from the ISY prespective.
@@ -38,6 +46,8 @@ static void *start(void *args)
 	 * nodes.
 	 */
 
+	installProfile();
+
 	/* Create and configure the controller node */
 	controller = allocNode("controller", "c_address", "c_address",
 			"Template Controller");
@@ -53,9 +63,11 @@ static void *start(void *args)
 
 	check_params();
 	discover(controller->address);
+
+	return NULL;
 }
 
-static void *long_poll(void)
+static void *long_poll(void *ptr)
 {
 	struct node *n;
 
@@ -69,12 +81,14 @@ static void *long_poll(void)
 	/* Get the node list and walk it calling a function to update the node */
 	n = getNodes();
 	while (n) {
-		if (strcmp(n->address, controller_address) != 0)
-			node_update(n)
+		if (!n->isPrimary && n->ops.longPoll)
+			n->ops.longPoll(n);
 	}
+
+	return NULL;
 }
 
-static void *short_poll(void)
+static void *short_poll(void *ptr)
 {
 	struct node *n;
 
@@ -87,9 +101,11 @@ static void *short_poll(void)
 	/* Get the node list and walk it calling a function to update the node */
 	n = getNodes();
 	while (n) {
-		if (strcmp(n->address, controller_address) != 0)
-			node_update(n)
+		if (!n->isPrimary && n->ops.shortPoll)
+			n->ops.shortPoll(n);
 	}
+
+	return NULL;
 }
 
 void *query(void)
@@ -102,13 +118,16 @@ void *query(void)
 	 */
 	n = getNodes();
 	while (n) {
-		n->report_drivers(n);
+		n->ops.reportDrivers(n);
 	}
+
+	return NULL;
 }
 
 void *stop(void)
 {
 	logger(DEBUG, "NodeServer stopped.\n");
+	return NULL;
 }
 
 static void *config(void *args)
@@ -122,13 +141,14 @@ static void *config(void *args)
 	 * into objects of some type.
 	 */
 	logger(DEBUG, "In Node server config handler.\n");
+	return NULL;
 }
 
-struct iface_ops controller_ops {
-	.start = start;
-	.shortPoll = short_poll;
-	.longPoll = long_poll;
-	.onConfig = config;
+struct iface_ops controller_ops = {
+	.start = start,
+	.shortPoll = short_poll,
+	.longPoll = long_poll,
+	.onConfig = config,
 };
 
 
@@ -138,9 +158,9 @@ struct iface_ops controller_ops {
  * example controller start method and from DISCOVER command recieved from
  * ISY as an exmaple.
  */
-static void discover(void)
+static void discover(char *parent)
 {
-	addNode(TemplateNode(self.address, 'templateaddr', 'Template Node Name'))
+	addNode(TemplateNode(parent, "templateaddr", "Template Node Name"));
 }
 
 
@@ -224,7 +244,7 @@ static void cmd_discover(struct node *self, char *id, char *value, int uom)
 
 static void cmd_set_debug_mode(struct node *self, char *id, char *value, int uom)
 {
-	loogerf(DEBUG, "cmd_set_debug_mode: %s\n", value);
+	loggerf(DEBUG, "cmd_set_debug_mode: %s\n", value);
 
 	/* FIXME: need to convert the value to enum */
 	logger_set_level(atoi(value));
