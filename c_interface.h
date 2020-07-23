@@ -52,6 +52,13 @@ void logger(enum LOGLEVELS level, const char *msg);
 void loggerf(enum LOGLEVELS level, const char *fmt, ...);
 void logger_set_level(enum LOGLEVELS new_level);
 
+/* Use this to initialize NS with fixed parameters */
+struct cmdline {
+	char *host;
+	int port;
+	int profile;
+};
+
 #define PARAMETER_CHANGED 0x01
 struct pair {
 	char *key;
@@ -121,7 +128,7 @@ struct iface_ops {
 	void *(*delete)(void *args);
 };
 
-int init(struct iface_ops *ns_ops);
+int init(struct iface_ops *ns_ops, struct cmdline *cmdln);
 int isConnected(void);
 char *getConfig(void);
 struct pair *getCustomParams(void);

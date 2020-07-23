@@ -7,7 +7,7 @@
 .Sh SYNOPSIS
 .In c_interface.h
 .Ft int
-.Fn init "struct iface_ops *node_server_ops:
+.Fn init "struct iface_ops *node_server_ops" "struct cmdline *cmdline"
 .Ft void
 .Fn initialize_logging "void"
 .Ft void
@@ -88,8 +88,11 @@ building of ISY node servers in 'C' or 'C++'.
 .Pp
 The function
 .Fn init 
-initializes the library, reads the configuration information from standard in, 
-initiates a MQTT connection with Polyglot and hooks up the applications functions for 
+initializes the library, reads the configuration information from standard in. 
+If the cmdline point is not NULL, use the information in the cmdline structure to initialize
+the configuration instead of stdin.
+Using the configurartion, initiates a MQTT connection with Polyglot and hooks up the
+applications functions for:
 .Fn start
 .Fn shortPoll
 .Fn longPoll

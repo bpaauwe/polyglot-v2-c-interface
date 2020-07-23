@@ -54,22 +54,21 @@ extern void initialize_logging(void);
 /*
  * Initialize the link to Polyglot
  */
-int init(struct iface_ops *ns_ops)
+int init(struct iface_ops *ns_ops, struct cmdline *cmd)
 {
 	int ret;
 	char *host;
 	int port;
 	int profile;
 
-	/*
-	 * get_std_info_test() can be used to force specific input
-	 * parameters for testing.  This allows the node server to 
-	 * be run from the command line instead of having Polyglot
-	 * start it.
-	 * if (get_stdin_info_test(&host, &port, &profile) != 0)
-	 */
-	if (get_stdin_info(&host, &port, &profile) != 0)
-		return -2;
+	if (cmd != NULL) {
+		host = cmd->host;
+		port = cmd->port;
+		profile = cmd->profile;
+	} else {
+		if (get_stdin_info(&host, &port, &profile) != 0)
+			return -2;
+	}
 
 	initialize_logging();
 
@@ -128,7 +127,7 @@ int init(struct iface_ops *ns_ops)
 
 	/* Make the connection */
 	loggerf(INFO, "Connect to Polyglot via MQTT %s:%d\n", host, port);
-	ret = mosquitto_connect_async(mosq, host, port, 0);
+	ret = mosquitto_connect_async(mosq, host, port, 10);
 	switch (ret) {
 		case MOSQ_ERR_SUCCESS:
 			logger(INFO, "successful connection.\n");
