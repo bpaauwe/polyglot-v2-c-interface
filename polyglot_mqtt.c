@@ -61,8 +61,14 @@ int init(struct iface_ops *ns_ops)
 	int port;
 	int profile;
 
-	//if (get_stdin_info(&host, &port, &profile) != 0)
-	if (get_stdin_info_test(&host, &port, &profile) != 0)
+	/*
+	 * get_std_info_test() can be used to force specific input
+	 * parameters for testing.  This allows the node server to 
+	 * be run from the command line instead of having Polyglot
+	 * start it.
+	 * if (get_stdin_info_test(&host, &port, &profile) != 0)
+	 */
+	if (get_stdin_info(&host, &port, &profile) != 0)
 		return -2;
 
 	initialize_logging();
