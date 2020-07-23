@@ -25,6 +25,7 @@ int main (int argc, char **argv)
 	int ret;
 	struct pair p, p1;
 	int do_once = 0;
+	struct cmdline cmdln;
 
 	/*
 	 * Initialize the interface library.
@@ -39,7 +40,10 @@ int main (int argc, char **argv)
 	 *   long_poll()  - called at the user defined long poll interval for
 	 *                  the node server.
 	 */
-	ret = init(&controller_ops);
+	cmdln.host = "localhost";
+	cmdln.port = 1883;
+	cmdln.profile = 17;
+	ret = init(&controller_ops, &cmdln);
 
 	/*
 	 * The interface library contains a logging facility that is created
@@ -51,7 +55,7 @@ int main (int argc, char **argv)
 
 	/* Wait here until stopped */
 	while(1) {
-		sleep(1);
+		sleep(30);
 	}
 
 	logger(INFO, "C Template node server stopped\n");
