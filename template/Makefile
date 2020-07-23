@@ -11,9 +11,6 @@ CC = cc
 template-poly: template-poly.c ../c_interface.h ../libpolyglotiface.so.1 $(OBJS)
 	cc -g -o template-poly $(INCS) $(LIBS) template-poly.c $(OBJS)
 
-ns_template: ns_template.c ../c_interface.h ../libpolyglotiface.so.1
-	cc -g -o ns_template $(INCS) $(LIBS) ns_template.c
-
 all: template-poly
 
 clean:
