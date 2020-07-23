@@ -355,10 +355,11 @@ void addNode(struct node *n)
 	cJSON *node_array_obj;
 	int cnt;
 
+	n->next = NULL;  /* Just to be safe */
+
 	if (!poly->nodelist) {
 		poly->nodelist = n;
 	} else {
-
 		tmp = poly->nodelist;
 		while (tmp->next)
 			tmp = tmp->next;
