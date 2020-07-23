@@ -83,6 +83,7 @@ static void *long_poll(void *ptr)
 	while (n) {
 		if (!n->isPrimary && n->ops.longPoll)
 			n->ops.longPoll(n);
+		n = n->next;
 	}
 
 	return NULL;
@@ -103,6 +104,7 @@ static void *short_poll(void *ptr)
 	while (n) {
 		if (!n->isPrimary && n->ops.shortPoll)
 			n->ops.shortPoll(n);
+		n = n->next;
 	}
 
 	return NULL;
@@ -119,6 +121,7 @@ void *query(void)
 	n = getNodes();
 	while (n) {
 		n->ops.reportDrivers(n);
+		n = n->next;
 	}
 
 	return NULL;
