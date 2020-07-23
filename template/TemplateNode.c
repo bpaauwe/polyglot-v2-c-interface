@@ -18,10 +18,8 @@
  * This method is run once the Node is successfully added to the ISY
  * and we get a return result from Polyglot. Only happens once.
  */
-static void *start(void *args)
+static void start(struct node *self)
 {
-	struct node *self = (struct node *)args;
-
 	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
 	self->ops.setDriver(self, "ST", "1", 1, 1, 2);
 	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
@@ -31,16 +29,12 @@ static void *start(void *args)
 	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
 	self->ops.setDriver(self, "ST", "0", 1, 1, 2);
 	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
-
-	return NULL;
 }
 
 /*
  */
-static void *short_poll(void *args)
+static void short_poll(struct node *self)
 {
-	struct node *self = (struct node *)args;
-
 	logger(DEBUG, "shortPoll\n");
 
 	if (atoi(self->ops.getDriver(self, "ST")) == 1)
@@ -49,17 +43,11 @@ static void *short_poll(void *args)
 		self->ops.setDriver(self, "ST", "1", 1, 1, 2);
 
 	loggerf(DEBUG, "%s: get ST=%s\n", self->name, self->ops.getDriver(self, "ST"));
-
-	return NULL;
 }
 
-static void *long_poll(void *args)
+static void long_poll(struct node *self)
 {
-	struct node *self = (struct node *)args;
-
 	logger(DEBUG, "longPoll\n");
-
-	return NULL;
 }
 
 /*
@@ -67,13 +55,9 @@ static void *long_poll(void *args)
  * the parent class, so you don't need to override this method unless
  * there is a need.
  */
-static void *query(void *args)
+static void query(struct node *self)
 {
-	struct node *self = (struct node *)args;
-
 	self->ops.reportDrivers(self);
-
-	return NULL;
 }
 
 /*
